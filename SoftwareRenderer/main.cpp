@@ -2,6 +2,7 @@
 #include <format>
 #include <chrono>
 #include <thread>
+#include <random>
 
 #include <SFML/Graphics.hpp>
 
@@ -19,6 +20,10 @@ void draw_line(Vec2i a, Vec2i b, sf::VertexArray& frame_buffer, const sf::Color&
 void draw_triangle(Vec2i a, Vec2i b, Vec2i c, sf::VertexArray& frame_buffer, const sf::Color& color, bool filled = false);
 bool import_model_and_draw(const std::string& modelpath, sf::VertexArray& frame_buffer);
 
+std::random_device random_device;
+std::mt19937 engine(random_device());
+std::uniform_int_distribution<> distrib(0, 255);
+
 sf::RenderWindow* p_win;
 
 int main()
@@ -27,19 +32,21 @@ int main()
     p_win = &window;
     sf::VertexArray frame_buffer(sf::Points, w * h);
 
-    //import_model_and_draw("data/rubber_duck/scene.gltf", frame_buffer);
+    import_model_and_draw("data/rubber_duck/scene.gltf", frame_buffer);
 
-    Vec2i t0[3] = { Vec2i(10, 70),   Vec2i(50, 160),  Vec2i(70, 80) };
-    draw_triangle(t0[0], t0[1], t0[2], frame_buffer, sf::Color::Red, true);
-    draw_triangle(t0[0], t0[1], t0[2], frame_buffer, sf::Color::Red);
+    /*
+        Vec2i t0[3] = { Vec2i(10, 70),   Vec2i(50, 160),  Vec2i(70, 80) };
+        draw_triangle(t0[0], t0[1], t0[2], frame_buffer, sf::Color::Red, true);
+        draw_triangle(t0[0], t0[1], t0[2], frame_buffer, sf::Color::Red);
 
-    Vec2i t1[3] = { Vec2i(180, 50),  Vec2i(150, 1),   Vec2i(70, 180) };
-    draw_triangle(t1[0], t1[1], t1[2], frame_buffer, sf::Color::White, true);
-    draw_triangle(t1[0], t1[1], t1[2], frame_buffer, sf::Color::White);
+        Vec2i t1[3] = { Vec2i(180, 50),  Vec2i(150, 1),   Vec2i(70, 180) };
+        draw_triangle(t1[0], t1[1], t1[2], frame_buffer, sf::Color::White, true);
+        draw_triangle(t1[0], t1[1], t1[2], frame_buffer, sf::Color::White);
 
-    Vec2i t2[3] = { Vec2i(180, 150), Vec2i(120, 160), Vec2i(130, 180) };
-    draw_triangle(t2[0], t2[1], t2[2], frame_buffer, sf::Color::Green, true);
-    draw_triangle(t2[0], t2[1], t2[2], frame_buffer, sf::Color::Green);
+        Vec2i t2[3] = { Vec2i(180, 150), Vec2i(120, 160), Vec2i(130, 180) };
+        draw_triangle(t2[0], t2[1], t2[2], frame_buffer, sf::Color::Green, true);
+        draw_triangle(t2[0], t2[1], t2[2], frame_buffer, sf::Color::Green);
+    */
 
     while (window.isOpen())
     {
@@ -50,9 +57,9 @@ int main()
                 window.close();
         }
 
-        //window.clear();
-        //window.draw(frame_buffer);
-        //window.display();
+        window.clear();
+        window.draw(frame_buffer);
+        window.display();
     }
 
     return 0;
@@ -62,12 +69,17 @@ std::vector<int> interpolate_x(Vec2i a, Vec2i b)
 {
     std::vector<int> x_coords;
 
+    if (a.y == b.y)
+        return x_coords;
+
     const int total_height = b.y - a.y;
     for (int y = a.y; y <= b.y; y++)
     {
         float y_way_percent = (y - a.y) / (float)total_height;
+        //std::cout << "y_way_percent: " << y_way_percent << std::endl;
         const int x = a.x + (b.x - a.x) * y_way_percent;
         x_coords.push_back(x);
+        //std::cout << "X~~: " << x << std::endl;
     }
 
     // TODO: Посмотреть, как повлияет на производительность std::move().
@@ -77,7 +89,7 @@ std::vector<int> interpolate_x(Vec2i a, Vec2i b)
 void draw_line(Vec2i a, Vec2i b, sf::VertexArray& frame_buffer, const sf::Color& color) {
     if (a.x == b.x && a.y == b.y)
     {
-        std::cout << std::format("Line drawing from [{},{}] to [{},{}]\n", a.x, a.y, b.x, b.y);
+        //std::cout << std::format("Line drawing from [{},{}] to [{},{}]\n", a.x, a.y, b.x, b.y);
 
         sf::Vector2f pos(a.x, a.y);
         int index = w * a.y + a.x; // Раскладываем строки буфера в горизонтальную линию.
@@ -86,9 +98,9 @@ void draw_line(Vec2i a, Vec2i b, sf::VertexArray& frame_buffer, const sf::Color&
         frame_buffer[index].position = pos;
         frame_buffer[index].color = color;
 
-        p_win->draw(frame_buffer);
-        p_win->display();
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        //p_win->draw(frame_buffer);
+        //p_win->display();
+        //std::this_thread::sleep_for(std::chrono::milliseconds(100));
         return;
     }
 
@@ -106,10 +118,10 @@ void draw_line(Vec2i a, Vec2i b, sf::VertexArray& frame_buffer, const sf::Color&
         std::swap(a.y, b.y);
     }
 
-    if (swapped)
+    /*if (swapped)
         std::cout << std::format("Line drawing from [{},{}] to [{},{}]\n", a.y, a.x, b.y, b.x);
     else
-        std::cout << std::format("Line drawing from [{},{}] to [{},{}]\n", a.x, a.y, b.x, b.y);
+        std::cout << std::format("Line drawing from [{},{}] to [{},{}]\n", a.x, a.y, b.x, b.y);*/
 
     for (int x = a.x; x <= b.x; x++)
     {
@@ -131,8 +143,8 @@ void draw_line(Vec2i a, Vec2i b, sf::VertexArray& frame_buffer, const sf::Color&
         frame_buffer[index].position = pos;
         frame_buffer[index].color = color;
 
-        p_win->draw(frame_buffer);
-        p_win->display();
+        //p_win->draw(frame_buffer);
+        //p_win->display();
         //std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 }
@@ -149,7 +161,7 @@ bool import_model_and_draw(const std::string& modelpath, sf::VertexArray& frame_
 
     if (scene == nullptr)
     {
-        std::cout << importer.GetErrorString() << std::endl;
+        //std::cout << importer.GetErrorString() << std::endl;
         return false;
     }
 
@@ -158,10 +170,11 @@ bool import_model_and_draw(const std::string& modelpath, sf::VertexArray& frame_
     {
         const aiFace& face = mesh->mFaces[i];
         const unsigned int idx[3] = { face.mIndices[0], face.mIndices[1], face.mIndices[2] };
+        std::vector<Vec2i> triangle_vertices;
         for (int j = 0; j != 3; j++)
         {
             const aiVector3D va = mesh->mVertices[idx[j]];
-            const aiVector3D vb = mesh->mVertices[idx[(j + 1) % 3]];
+            //const aiVector3D vb = mesh->mVertices[idx[(j + 1) % 3]];
 
             //std::cout << std::format("va({},{},{})", va.x, va.y, va.z) << std::endl;
             //std::cout << std::format("vb({},{},{})", vb.x, vb.y, vb.z) << std::endl;
@@ -173,15 +186,19 @@ bool import_model_and_draw(const std::string& modelpath, sf::VertexArray& frame_
 
             //std::cout << std::endl;
 
-            const int b_screen_x = (vb.x + 1.0f) * (w / 2);
-            const int b_screen_y = vb.z * (h / 2);
+            //const int b_screen_x = (vb.x + 1.0f) * (w / 2);
+            //const int b_screen_y = vb.z * (h / 2);
             //const int b_screen_y = (vb.z * h) - 1;
             //std::cout << std::format("b_screen({},{})", b_screen_x, b_screen_y) << std::endl;
 
             Vec2i a(a_screen_x, a_screen_y);
-            Vec2i b(b_screen_x, b_screen_y);
-            draw_line(a, b, frame_buffer, sf::Color::White);
+            triangle_vertices.push_back(a);
+            //Vec2i b(b_screen_x, b_screen_y);
+            //draw_line(a, b, frame_buffer, sf::Color::White);
         }
+
+        sf::Color random_color(distrib(engine), distrib(engine), distrib(engine));
+        draw_triangle(triangle_vertices[0], triangle_vertices[1], triangle_vertices[2], frame_buffer, random_color, true);
     }
 
     return true;
@@ -205,26 +222,38 @@ void draw_triangle(Vec2i a, Vec2i b, Vec2i c, sf::VertexArray& frame_buffer, con
 
     // Координаты x сторон треугольника.
     const std::vector<int> x_coords_ac = interpolate_x(a, c);
-    std::cout << "count(ac): " << x_coords_ac.size() << std::endl;
+    //std::cout << "count(ac): " << x_coords_ac.size() << std::endl;
+
+    // Если треугольник выродился в горизонтальную линию.
+    if (x_coords_ac.empty())
+    {
+        //std::cout << std::format("smth wrong with a[{},{}], b[{},{}], c[{},{}]", a.x, a.y, b.x, b.y, c.x, c.y) << std::endl;
+        return;
+    }
 
     // Последний элемент ab равен первому элементу bc - удаляем его,
     // чтобы размеры ac и ab+bc были равны.
     std::vector<int> x_coords_ab = interpolate_x(a, b);
-    x_coords_ab.pop_back();
     const std::vector<int> x_coords_bc = interpolate_x(b, c);
-    std::cout << "count(ab+bc): " << x_coords_ab.size() + x_coords_bc.size() << std::endl;
+
+    // Если ни одна линия не горизонтальная, то обе дают иксы, причем конец ab дублируется в начале bc.
+    // В противном случае один из массивов будет пустым, а второй будет целиком формировать иксы.
+    if (!x_coords_ab.empty() && !x_coords_bc.empty())
+        x_coords_ab.pop_back();
+
     std::vector<int> x_coords_abc = x_coords_ab; // TODO: std::move().
     x_coords_abc.insert(x_coords_abc.end(), x_coords_bc.begin(), x_coords_bc.end());
 
     for (const auto& x : x_coords_abc)
     {
-        std::cout << x << std::endl;
+        //std::cout << x << std::endl;
     }
 
     int triangle_height = c.y - a.y;
-    std::cout << triangle_height << std::endl;
+    //std::cout << triangle_height << std::endl;
 
-    for (int i = 0; i < triangle_height + 1; i++) {
+    for (int i = 0; i < triangle_height + 1; i++)
+    {
         const int x_1 = x_coords_ac[i];
         const int x_2 = x_coords_abc[i];
         Vec2i p1(x_1, i + a.y);
