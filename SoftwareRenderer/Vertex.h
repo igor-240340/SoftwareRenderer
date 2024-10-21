@@ -1,10 +1,10 @@
 #pragma once
 
-#include "Vec3f.h"
+#include "Vec3.h"
 
 struct Vertex
 {
-    Vec3f pos;
+    Vec3 pos;
     float u;
     float v;
 };

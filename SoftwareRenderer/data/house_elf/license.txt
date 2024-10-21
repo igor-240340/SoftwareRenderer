@@ -1,0 +1,11 @@
+Model Information:
+* title:	House Elf
+* source:	https://sketchfab.com/3d-models/house-elf-7a3e5fcf219f4569ad5e0e0b8dcc0a95
+* author:	Julian Johnson-Mortimer (https://sketchfab.com/FreddyFoxFreddy)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "House Elf" (https://sketchfab.com/3d-models/house-elf-7a3e5fcf219f4569ad5e0e0b8dcc0a95) by Julian Johnson-Mortimer (https://sketchfab.com/FreddyFoxFreddy) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

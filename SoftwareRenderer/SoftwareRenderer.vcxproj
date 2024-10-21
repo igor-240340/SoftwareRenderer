@@ -136,11 +136,16 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Mat4x4.cpp" />
+    <ClCompile Include="Vec3.cpp" />
+    <ClCompile Include="Vec4.cpp" />
     <ClCompile Include="Vertex.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Vec3f.h" />
+    <ClInclude Include="Mat4x4.h" />
+    <ClInclude Include="Vec3.h" />
     <ClInclude Include="Vec2i.h" />
+    <ClInclude Include="Vec4.h" />
     <ClInclude Include="Vertex.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
