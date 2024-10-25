@@ -14,9 +14,9 @@
 #include <assimp/postprocess.h>
 
 #include "Vec2i.h"
-#include "Vec3.h"
+#include "Vec3f.h"
 #include "Vertex.h"
-#include "Mat4x4.h"
+#include "Mat4f.h"
 
 constexpr int w = 1024;
 constexpr int h = 768;
@@ -25,7 +25,7 @@ std::vector<int> interpolate_x(Vec2i a, Vec2i b);
 void draw_line(Vec2i a, Vec2i b, sf::VertexArray& frame_buffer, float intensity, Vertex ta, Vertex tb, Vertex tc);
 void draw_triangle(Vertex a, Vertex b, Vertex c, sf::VertexArray& frame_buffer, float intensity, bool filled = false);
 bool import_model_and_draw(const std::string& modelpath, sf::VertexArray& frame_buffer);
-float get_depth_for_fragment(int coord_x, int coord_y, Vec3 ta, Vec3 tb, Vec3 tc);
+float get_depth_for_fragment(int coord_x, int coord_y, Vec3f ta, Vec3f tb, Vec3f tc);
 void interpolate_uv(int fragment_coord_x, int fragment_coord_y, Vertex a, Vertex b, Vertex c, float& u, float& v);
 
 //std::random_device random_device;
@@ -52,9 +52,9 @@ int main()
 
     sf::Texture texture;
     //if (!texture.loadFromFile("data/african_head_diffuse.tga"))
-    if (!texture.loadFromFile("data/box_textured/textures/uv_map.jpg"))
+    //if (!texture.loadFromFile("data/box_textured/textures/uv_map.jpg"))
         //if (!texture.loadFromFile("data/rubber_duck/textures/Duck_baseColor.png"))
-        //if (!texture.loadFromFile("data/pony_cartoon/textures/Body_SG1_baseColor.jpeg"))
+        if (!texture.loadFromFile("data/pony_cartoon/textures/Body_SG1_baseColor.jpeg"))
         //if (!texture.loadFromFile("data/prime1_studios_joker/textures/tex_u1_v1_baseColor.jpeg"))
     {
         std::cerr << "Failed to load texture" << std::endl;
@@ -63,9 +63,9 @@ int main()
     sf::Image image = texture.copyToImage();
     p_image = &image;
 
-    import_model_and_draw("data/box_textured/scene.gltf", frame_buffer);
+    //import_model_and_draw("data/box_textured/scene.gltf", frame_buffer);
     //import_model_and_draw("data/rubber_duck/scene.gltf", frame_buffer);
-    //import_model_and_draw("data/pony_cartoon/scene.gltf", frame_buffer);
+    import_model_and_draw("data/pony_cartoon/scene.gltf", frame_buffer);
     //import_model_and_draw("data/prime1_studios_joker/scene.gltf", frame_buffer);
     //import_model_and_draw("data/african_head.obj", frame_buffer);
     //import_model_and_draw("data/wheelretopopbr/scene.gltf", frame_buffer);
@@ -149,7 +149,7 @@ void draw_line(Vec2i a, Vec2i b, sf::VertexArray& frame_buffer, float intensity,
             sf::Color tex_color = p_image->getPixel(tex_u, tex_v);
             tex_color = sf::Color(tex_color.r * intensity, tex_color.g * intensity, tex_color.b * intensity);
 
-            pos.y = h - pos.y; // В виртуальной СК начало координат в левом нижнем углу, а в мировой - в левом верхнем.
+            pos.y = h - pos.y;
             frame_buffer[index].position = pos;
             frame_buffer[index].color = tex_color;
             depth_buffer[index] = source_fragment_depth;
@@ -219,7 +219,7 @@ void draw_line(Vec2i a, Vec2i b, sf::VertexArray& frame_buffer, float intensity,
             sf::Color tex_color = p_image->getPixel(tex_u, tex_v);
             tex_color = sf::Color(tex_color.r * intensity, tex_color.g * intensity, tex_color.b * intensity);
 
-            pos.y = h - pos.y; // В виртуальной СК начало координат в левом нижнем углу, а в мировой - в левом верхнем.
+            pos.y = h - pos.y;
             frame_buffer[index].position = pos;
             frame_buffer[index].color = tex_color;
             //frame_buffer[index].color = color;
@@ -253,97 +253,39 @@ bool import_model_and_draw(const std::string& modelpath, sf::VertexArray& frame_
 
     const aiMesh* mesh = scene->mMeshes[0];
 
-    Mat4x4 persp_proj = Mat4x4::create_perspective(45.0f * (std::numbers::pi / 180.0f), w / (float)h, -1.0f, -100.0f);
+    Mat4f persp_proj = Mat4f::create_perspective(50.0f * (std::numbers::pi / 180.0f), w / (float)h, -0.1f, -100.0f);
+    Mat4f view = Mat4f::create_viewport(w, h);
     for (unsigned int i = 0; i != mesh->mNumFaces; i++)
     {
         const aiFace& face = mesh->mFaces[i];
         const unsigned int idx[3] = { face.mIndices[0], face.mIndices[1], face.mIndices[2] };
         std::vector<Vertex> triangle_vertices;
-        std::vector<Vec3> triangle_vertices_orig;
+        std::vector<Vec3f> triangle_vertices_orig;
         for (int j = 0; j != 3; j++)
         {
             const aiVector3D va = mesh->mVertices[idx[j]];
 
-            Vec4 v4{ va.x, va.y - 0.5f, va.z-3 };
-            Vec4 in_clip_space = persp_proj * v4;
-            Vec4 in_ndc = in_clip_space / in_clip_space.w;
-
-            // Begin: Persp.
-            /*float x_proj = va.x * p_proj_conf->d / (0.0f - (va.z-3));
-            float y_proj = (va.y-0.5) * p_proj_conf->d / (0.0f - (va.z-3));
-
-            float x_proj_ndc = x_proj / p_proj_conf->screen_aspect_ratio;
-            float y_proj_ndc = y_proj;*/
-
-            int a_screen_x = in_ndc.x * (w / 2) + (w / 2);
-            int a_screen_y = in_ndc.y * (h / 2) + (h / 2);
-
-            //std::cout << std::format("a_screen_x: {}, a_screen_y: {})", a_screen_x, a_screen_y) << std::endl;
-
-            if (a_screen_y >= h)
-                a_screen_y = h - 1;
-
-            if (a_screen_x >= w)
-                a_screen_x = w - 1;
-
-            if (a_screen_x == 1009 && a_screen_y == 669)
-                std::cout << "1\n";
-
-            if (a_screen_y < 0)
-                std::cout << "2\n";
-
-            //if (a_screen_y == 865)
-            //{
-            //}
-            // End: Persp.
-
-            //const aiVector3D vb = mesh->mVertices[idx[(j + 1) % 3]];
-
-            //std::cout << std::format("va({},{},{})", va.x, va.y, va.z) << std::endl;
-            //std::cout << std::format("vb({},{},{})", vb.x, vb.y, vb.z) << std::endl;
-
-            //const int a_screen_x = (va.x + 1.0f) * (w / 2);
-            //const int a_screen_y = va.z * (h / 1.5);
-
-            //int a_screen_x = (va.x + -aabb.mMin.x) / (aabb.mMax.x - aabb.mMin.x) * w;
-            //int a_screen_x = (va.x + -1.5 * aabb.mMin.x) / (aabb.mMax.x - aabb.mMin.x) * w / 1.5;
-            //const int a_screen_x = (va.z + -aabb.mMin.z) / (aabb.mMax.z - aabb.mMin.z) * w;
-            //int a_screen_y = ((va.z + -aabb.mMin.z) / (aabb.mMax.z - aabb.mMin.z) * h);
-            //int a_screen_y = (va.y + -1.5 * aabb.mMin.y) / (aabb.mMax.y - aabb.mMin.y) * h / 1.5;
-            //if (a_screen_y >= h) a_screen_y = h - 1;
-            //if (a_screen_x >= w) a_screen_x = w - 1;
-
-            //const int a_screen_y = (va.z * h) - 1;
-            //std::cout << std::format("a_screen({},{})", a_screen_x, a_screen_y) << std::endl;
-
-            //std::cout << std::endl;
-
-            //const int b_screen_x = (vb.x + 1.0f) * (w / 2);
-            //const int b_screen_y = vb.z * (h / 2);
-            //const int b_screen_y = (vb.z * h) - 1;
-            //std::cout << std::format("b_screen({},{})", b_screen_x, b_screen_y) << std::endl;
+            //Vec4f v4{ va.x, va.y - 0.8f, va.z - 3 };
+            Vec4f v4{ va.x, va.y, va.z-3 };
+            Vec4f in_clip_space = persp_proj * v4;
+            Vec4f in_ndc = in_clip_space / in_clip_space.w;
+            Vec3f in_screen = view * in_ndc;
 
             aiVector3D uv = mesh->mTextureCoords[0][idx[j]];
             float u = uv.x;
             float v = uv.y;
-            //std::cout << std::format("u:{}, v:{})", u, v) << std::endl;
 
-            //Vec3 a(a_screen_x, a_screen_y, va.y);
-            Vec3 a(a_screen_x, a_screen_y, -va.z);
-            Vertex vt{ a, u, v };
+            Vertex vt{ in_screen, u, v };
             triangle_vertices.push_back(vt);
-            //Vec2i b(b_screen_x, b_screen_y);
-            //draw_line(a, b, frame_buffer, sf::Color::White);
 
-            triangle_vertices_orig.push_back(Vec3(va.x, va.y, va.z));
+            triangle_vertices_orig.push_back(Vec3f(va.x, va.y, va.z));
         }
 
-        Vec3 vector_a = triangle_vertices_orig[1] - triangle_vertices_orig[0];
-        Vec3 vector_b = triangle_vertices_orig[2] - triangle_vertices_orig[0];
-
-        Vec3 face_normal = Vec3::cross(vector_a, vector_b).normalized();
-        Vec3 light_dir(0.0f, 0.0f, -1.0f);
-        float intensity = Vec3::dot(face_normal, light_dir);
+        Vec3f vector_a = triangle_vertices_orig[1] - triangle_vertices_orig[0];
+        Vec3f vector_b = triangle_vertices_orig[2] - triangle_vertices_orig[0];
+        Vec3f face_normal = Vec3f::cross(vector_a, vector_b).normalized();
+        Vec3f light_dir(0.0f, 0.0f, -1.0f);
+        float intensity = Vec3f::dot(face_normal, light_dir);
         if (intensity < 0)
         {
             draw_triangle(triangle_vertices[0], triangle_vertices[1], triangle_vertices[2], frame_buffer, std::abs(intensity), true);
@@ -353,7 +295,7 @@ bool import_model_and_draw(const std::string& modelpath, sf::VertexArray& frame_
     return true;
 }
 
-float get_depth_for_fragment(int coord_x, int coord_y, Vec3 ta, Vec3 tb, Vec3 tc)
+float get_depth_for_fragment(int coord_x, int coord_y, Vec3f ta, Vec3f tb, Vec3f tc)
 {
     /*coord_x = 752;
     coord_y = 1280;
