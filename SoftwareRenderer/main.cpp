@@ -24,7 +24,7 @@ constexpr int h = 768;
 std::vector<int> interpolate_x(Vec2i a, Vec2i b);
 void draw_line(Vec2i a, Vec2i b, sf::VertexArray& frame_buffer, float intensity, Vertex ta, Vertex tb, Vertex tc);
 void draw_triangle(Vertex a, Vertex b, Vertex c, sf::VertexArray& frame_buffer, float intensity, bool filled = false);
-bool import_model_and_draw(const std::string& modelpath, sf::VertexArray& frame_buffer);
+bool draw_rotate(const aiMesh* mesh, sf::VertexArray& frame_buffer, float angle_deg);
 float get_depth_for_fragment(int coord_x, int coord_y, Vec3f ta, Vec3f tb, Vec3f tc);
 void interpolate_uv(int fragment_coord_x, int fragment_coord_y, Vertex a, Vertex b, Vertex c, float& u, float& v);
 
@@ -51,6 +51,7 @@ int main()
     }
 
     sf::Texture texture;
+    //if (!texture.loadFromFile("data/boxer/textures/material_0_baseColor.jpeg"))
     //if (!texture.loadFromFile("data/african_head_diffuse.tga"))
     if (!texture.loadFromFile("data/box_textured/textures/uv_map.jpg"))
         //if (!texture.loadFromFile("data/rubber_duck/textures/Duck_baseColor.png"))
@@ -63,7 +64,6 @@ int main()
     sf::Image image = texture.copyToImage();
     p_image = &image;
 
-    import_model_and_draw("data/box_textured/scene.gltf", frame_buffer);
     //import_model_and_draw("data/rubber_duck/scene.gltf", frame_buffer);
     //import_model_and_draw("data/pony_cartoon/scene.gltf", frame_buffer);
     //import_model_and_draw("data/prime1_studios_joker/scene.gltf", frame_buffer);
@@ -84,6 +84,27 @@ int main()
         draw_triangle(t2[0], t2[1], t2[2], frame_buffer, sf::Color::Green);
     */
 
+    // Импорт меша.
+    Assimp::Importer importer;
+    const aiScene* scene = importer.ReadFile("data/box_textured/scene.gltf",
+    //const aiScene* scene = importer.ReadFile("data/pony_cartoon/scene.gltf",
+    //const aiScene* scene = importer.ReadFile("data/boxer/scene.gltf",
+    //const aiScene* scene = importer.ReadFile("data/rubber_duck/scene.gltf",
+        aiProcess_CalcTangentSpace |
+        aiProcess_Triangulate |
+        aiProcess_JoinIdenticalVertices |
+        aiProcess_SortByPType |
+        aiProcess_GenBoundingBoxes |
+        aiProcess_PreTransformVertices);
+    const aiAABB& aabb = scene->mMeshes[0]->mAABB;
+    if (scene == nullptr)
+    {
+        std::cout << importer.GetErrorString() << std::endl;
+        return false;
+    }
+    const aiMesh* mesh = scene->mMeshes[0];
+
+    float angle = 0.0f;
     while (window.isOpen())
     {
         sf::Event event;
@@ -94,6 +115,15 @@ int main()
         }
 
         window.clear(sf::Color::White);
+
+        depth_buffer.fill(std::numeric_limits<float>::max());
+        for (int i = 0; i < w * h; i++)
+        {
+            frame_buffer[i].color = sf::Color::White;
+        }
+
+        draw_rotate(mesh, frame_buffer, angle += 1.5f);
+
         window.draw(frame_buffer);
         window.display();
     }
@@ -233,33 +263,14 @@ void draw_line(Vec2i a, Vec2i b, sf::VertexArray& frame_buffer, float intensity,
     }
 }
 
-bool import_model_and_draw(const std::string& modelpath, sf::VertexArray& frame_buffer)
+bool draw_rotate(const aiMesh* mesh, sf::VertexArray& frame_buffer, float angle_deg)
 {
-    Assimp::Importer importer;
-
-    const aiScene* scene = importer.ReadFile(modelpath,
-        aiProcess_CalcTangentSpace |
-        aiProcess_Triangulate |
-        aiProcess_JoinIdenticalVertices |
-        aiProcess_SortByPType |
-        aiProcess_GenBoundingBoxes |
-        aiProcess_PreTransformVertices);
-    const aiAABB& aabb = scene->mMeshes[0]->mAABB;
-
-    if (scene == nullptr)
-    {
-        //std::cout << importer.GetErrorString() << std::endl;
-        return false;
-    }
-
-    const aiMesh* mesh = scene->mMeshes[0];
-
     Mat4f persp_proj = Mat4f::create_perspective(50.0 * (std::numbers::pi / 180.0), w / (float)h, -0.1f, -100.0f);
     Mat4f view = Mat4f::create_viewport(w, h);
-    Mat4f translation = Mat4f::create_translation(Vec3f{0.0f, 0.0f, -10.0f});
-    Mat4f rotation_x = Mat4f::create_rotation_x(-15.0 * (std::numbers::pi / 180.0));
-    Mat4f rotation_y = Mat4f::create_rotation_y(-20.0 * (std::numbers::pi / 180.0));
-    Mat4f rotation_z = Mat4f::create_rotation_z(0.0 * (std::numbers::pi / 180.0));
+    Mat4f translation = Mat4f::create_translation(Vec3f{ 0.0f, 0.0f, -5.0f });
+    Mat4f rotation_x = Mat4f::create_rotation_x(angle_deg * (std::numbers::pi / 180.0));
+    Mat4f rotation_y = Mat4f::create_rotation_y(angle_deg * (std::numbers::pi / 180.0));
+    Mat4f rotation_z = Mat4f::create_rotation_z(angle_deg * (std::numbers::pi / 180.0));
 
     for (unsigned int i = 0; i != mesh->mNumFaces; i++)
     {
@@ -272,15 +283,15 @@ bool import_model_and_draw(const std::string& modelpath, sf::VertexArray& frame_
             const aiVector3D va = mesh->mVertices[idx[j]];
 
             Vec4f v4{ va.x, va.y, va.z };
-            
+
             // Сначала translation, потом rotation.
             //Vec4f translated = translation * v4;
             //Vec4f rotated = rotation_z * translated;
             //Vec4f in_clip_space = persp_proj * rotated;
-            
+
             // Сначала rotation, потом translation.
-            Vec4f rotated = rotation_y * v4;
-            rotated = rotation_x * rotated;
+            Vec4f rotated = rotation_x * v4;
+            rotated = rotation_y * rotated;
             rotated = rotation_z * rotated;
             Vec4f translated = translation * rotated;
 
@@ -360,8 +371,13 @@ void interpolate_uv(int fragment_coord_x, int fragment_coord_y, Vertex a, Vertex
     v = w * a.v + _u * b.v + _v * c.v;
 
     // FIXME: В некоторых случаях площадь a_v оказывается больше площади total_area из-за чего получается отрицательный знак.
+    // Более того, u,v оказываются больше единицы.
     u = std::abs(u);
     v = std::abs(v);
+    if (u > 1)
+        u = 1;
+    if (v > 1)
+        v = 1;
 }
 
 void draw_triangle(Vertex a, Vertex b, Vertex c, sf::VertexArray& frame_buffer, float intensity, bool filled)
