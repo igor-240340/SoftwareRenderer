@@ -14,7 +14,11 @@ public:
 
     static Mat4f create_perspective(float fov_vert_rad, float aspect_ratio, float near, float far);
     static Mat4f create_viewport(int w, int h);
+    
     static Mat4f create_translation(const Vec3f& v);
+    static Mat4f create_rotation_x(const float angle_rad);
+    static Mat4f create_rotation_y(const float angle_rad);
+    static Mat4f create_rotation_z(const float angle_rad);
 
 private:
     float data[16];

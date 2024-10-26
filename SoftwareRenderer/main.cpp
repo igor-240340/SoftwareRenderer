@@ -141,6 +141,7 @@ void draw_line(Vec2i a, Vec2i b, sf::VertexArray& frame_buffer, float intensity,
             interpolate_uv(source_fragment_coord_x, source_fragment_coord_y, ta, tb, tc, u, v);
             int tex_width = p_image->getSize().x;
             int tex_height = p_image->getSize().y;
+
             int tex_u = static_cast<int>(u * (tex_width - 1));
             int tex_v = static_cast<int>((1.0f - v) * (tex_height - 1));
             if (tex_v < 0) tex_v = 0; // FIXME: Выяснить.
@@ -253,9 +254,13 @@ bool import_model_and_draw(const std::string& modelpath, sf::VertexArray& frame_
 
     const aiMesh* mesh = scene->mMeshes[0];
 
-    Mat4f persp_proj = Mat4f::create_perspective(50.0f * (std::numbers::pi / 180.0f), w / (float)h, -0.1f, -100.0f);
+    Mat4f persp_proj = Mat4f::create_perspective(50.0 * (std::numbers::pi / 180.0), w / (float)h, -0.1f, -100.0f);
     Mat4f view = Mat4f::create_viewport(w, h);
-    Mat4f translation = Mat4f::create_translation(Vec3f{1.0f, 0.0f, -3.0f});
+    Mat4f translation = Mat4f::create_translation(Vec3f{0.0f, 0.0f, -10.0f});
+    Mat4f rotation_x = Mat4f::create_rotation_x(-15.0 * (std::numbers::pi / 180.0));
+    Mat4f rotation_y = Mat4f::create_rotation_y(-20.0 * (std::numbers::pi / 180.0));
+    Mat4f rotation_z = Mat4f::create_rotation_z(0.0 * (std::numbers::pi / 180.0));
+
     for (unsigned int i = 0; i != mesh->mNumFaces; i++)
     {
         const aiFace& face = mesh->mFaces[i];
@@ -266,8 +271,22 @@ bool import_model_and_draw(const std::string& modelpath, sf::VertexArray& frame_
         {
             const aiVector3D va = mesh->mVertices[idx[j]];
 
-            Vec4f v4{ va.x, va.y-0.8f, va.z };
-            Vec4f translated = translation * v4;
+            Vec4f v4{ va.x, va.y, va.z };
+            
+            // Сначала translation, потом rotation.
+            //Vec4f translated = translation * v4;
+            //Vec4f rotated = rotation_z * translated;
+            //Vec4f in_clip_space = persp_proj * rotated;
+            
+            // Сначала rotation, потом translation.
+            Vec4f rotated = rotation_y * v4;
+            rotated = rotation_x * rotated;
+            rotated = rotation_z * rotated;
+            Vec4f translated = translation * rotated;
+
+            Vec3f tranformed_orig = translated;
+            triangle_vertices_orig.push_back(Vec3f(tranformed_orig.x, tranformed_orig.y, tranformed_orig.z));
+
             Vec4f in_clip_space = persp_proj * translated;
             Vec4f in_ndc = in_clip_space / in_clip_space.w;
             Vec3f in_screen = view * in_ndc;
@@ -278,8 +297,6 @@ bool import_model_and_draw(const std::string& modelpath, sf::VertexArray& frame_
 
             Vertex vt{ in_screen, u, v };
             triangle_vertices.push_back(vt);
-
-            triangle_vertices_orig.push_back(Vec3f(va.x, va.y, va.z));
         }
 
         Vec3f vector_a = triangle_vertices_orig[1] - triangle_vertices_orig[0];
@@ -330,12 +347,21 @@ void interpolate_uv(int fragment_coord_x, int fragment_coord_y, Vertex a, Vertex
     float a_u = ((c.pos.x - a.pos.x) * (fragment_coord_y - a.pos.y) - (c.pos.y - a.pos.y) * (fragment_coord_x - a.pos.x)) / 2;
     float a_v = ((fragment_coord_x - a.pos.x) * (b.pos.y - a.pos.y) - (fragment_coord_y - a.pos.y) * (b.pos.x - a.pos.x)) / 2;
 
+    // TODO: Разобраться с барицентрическими координатами. Разобраться со знаками площадей.
+    total_area = std::abs(total_area);
+    a_u = std::abs(a_u);
+    a_v = std::abs(a_v);
+
     float _u = a_u / total_area;
     float _v = a_v / total_area;
     float w = 1 - _u - _v;
 
     u = w * a.u + _u * b.u + _v * c.u;
     v = w * a.v + _u * b.v + _v * c.v;
+
+    // FIXME: В некоторых случаях площадь a_v оказывается больше площади total_area из-за чего получается отрицательный знак.
+    u = std::abs(u);
+    v = std::abs(v);
 }
 
 void draw_triangle(Vertex a, Vertex b, Vertex c, sf::VertexArray& frame_buffer, float intensity, bool filled)

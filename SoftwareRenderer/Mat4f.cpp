@@ -47,6 +47,7 @@ Mat4f Mat4f::create_viewport(int w, int h)
 Mat4f Mat4f::create_translation(const Vec3f& v)
 {
     Mat4f mat_trans{ 0.0f };
+
     mat_trans.data[0] = 1.0f;
     mat_trans.data[5] = 1.0f;
     mat_trans.data[10] = 1.0f;
@@ -57,4 +58,46 @@ Mat4f Mat4f::create_translation(const Vec3f& v)
     mat_trans.data[14] = v.z;
 
     return mat_trans;
+}
+
+Mat4f Mat4f::create_rotation_x(const float angle_rad)
+{
+    Mat4f mat_rot{ 0.0f };
+
+    mat_rot.data[0] = 1.0f;
+    mat_rot.data[5] = std::cosf(angle_rad);
+    mat_rot.data[6] = std::sinf(angle_rad);
+    mat_rot.data[9] = -std::sinf(angle_rad);
+    mat_rot.data[10] = std::cosf(angle_rad);
+    mat_rot.data[15] = 1.0f;
+
+    return mat_rot;
+}
+
+Mat4f Mat4f::create_rotation_y(const float angle_rad)
+{
+    Mat4f mat_rot{ 0.0f };
+
+    mat_rot.data[0] = std::cosf(angle_rad);;
+    mat_rot.data[2] = -std::sinf(angle_rad);
+    mat_rot.data[5] = 1.0f;
+    mat_rot.data[8] = std::sinf(angle_rad);
+    mat_rot.data[10] = std::cosf(angle_rad);
+    mat_rot.data[15] = 1.0f;
+
+    return mat_rot;
+}
+
+Mat4f Mat4f::create_rotation_z(const float angle_rad)
+{
+    Mat4f mat_rot{ 0.0f };
+
+    mat_rot.data[0] = std::cosf(angle_rad);
+    mat_rot.data[1] = std::sinf(angle_rad);
+    mat_rot.data[4] = -std::sinf(angle_rad);
+    mat_rot.data[5] = std::cosf(angle_rad);
+    mat_rot.data[10] = 1.0f;
+    mat_rot.data[15] = 1.0f;
+    
+    return mat_rot;
 }
