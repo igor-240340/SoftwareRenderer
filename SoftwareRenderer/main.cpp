@@ -40,7 +40,7 @@ sf::Image* p_image;
 
 int main()
 {
-    depth_buffer.fill(std::numeric_limits<float>::max());
+    depth_buffer.fill(-std::numeric_limits<float>::max());
 
     sf::RenderWindow window(sf::VideoMode(w, h), "Software Renderer");
     p_win = &window;
@@ -53,9 +53,9 @@ int main()
     sf::Texture texture;
     //if (!texture.loadFromFile("data/boxer/textures/material_0_baseColor.jpeg"))
     //if (!texture.loadFromFile("data/african_head_diffuse.tga"))
-    if (!texture.loadFromFile("data/box_textured/textures/uv_map.jpg"))
+    //if (!texture.loadFromFile("data/box_textured/textures/uv_map.jpg"))
         //if (!texture.loadFromFile("data/rubber_duck/textures/Duck_baseColor.png"))
-        //if (!texture.loadFromFile("data/pony_cartoon/textures/Body_SG1_baseColor.jpeg"))
+        if (!texture.loadFromFile("data/pony_cartoon/textures/Body_SG1_baseColor.jpeg"))
         //if (!texture.loadFromFile("data/prime1_studios_joker/textures/tex_u1_v1_baseColor.jpeg"))
     {
         std::cerr << "Failed to load texture" << std::endl;
@@ -86,7 +86,8 @@ int main()
 
     // Импорт меша.
     Assimp::Importer importer;
-    const aiScene* scene = importer.ReadFile("data/box_textured/scene.gltf",
+    const aiScene* scene = importer.ReadFile("data/pony_cartoon/scene.gltf",
+    //const aiScene* scene = importer.ReadFile("data/box_textured/scene.gltf",
     //const aiScene* scene = importer.ReadFile("data/pony_cartoon/scene.gltf",
     //const aiScene* scene = importer.ReadFile("data/boxer/scene.gltf",
     //const aiScene* scene = importer.ReadFile("data/rubber_duck/scene.gltf",
@@ -116,7 +117,7 @@ int main()
 
         window.clear(sf::Color::White);
 
-        depth_buffer.fill(std::numeric_limits<float>::max());
+        depth_buffer.fill(-std::numeric_limits<float>::max());
         for (int i = 0; i < w * h; i++)
         {
             frame_buffer[i].color = sf::Color::White;
@@ -164,7 +165,7 @@ void draw_line(Vec2i a, Vec2i b, sf::VertexArray& frame_buffer, float intensity,
         int source_fragment_coord_y = a.y;
         float source_fragment_depth = get_depth_for_fragment(source_fragment_coord_x, source_fragment_coord_y, ta.pos, tb.pos, tc.pos);
         float target_fragment_depth = depth_buffer.at(index);
-        if (source_fragment_depth < target_fragment_depth)
+        if (source_fragment_depth > target_fragment_depth)
         {
             float u;
             float v;
@@ -231,7 +232,7 @@ void draw_line(Vec2i a, Vec2i b, sf::VertexArray& frame_buffer, float intensity,
         int source_fragment_coord_y = y;
         float source_fragment_depth = get_depth_for_fragment(source_fragment_coord_x, source_fragment_coord_y, ta.pos, tb.pos, tc.pos);
         float target_fragment_depth = depth_buffer.at(index);
-        if (source_fragment_depth < target_fragment_depth)
+        if (source_fragment_depth > target_fragment_depth)
         {
             float u;
             float v;
@@ -265,12 +266,15 @@ void draw_line(Vec2i a, Vec2i b, sf::VertexArray& frame_buffer, float intensity,
 
 bool draw_rotate(const aiMesh* mesh, sf::VertexArray& frame_buffer, float angle_deg)
 {
-    Mat4f persp_proj = Mat4f::create_perspective(50.0 * (std::numbers::pi / 180.0), w / (float)h, -0.1f, -100.0f);
+    Mat4f persp_proj = Mat4f::create_perspective(50.0 * (std::numbers::pi / 180.0), w / (float)h, -1.0f, -50.0f);
     Mat4f view = Mat4f::create_viewport(w, h);
-    Mat4f translation = Mat4f::create_translation(Vec3f{ 0.0f, 0.0f, -5.0f });
-    Mat4f rotation_x = Mat4f::create_rotation_x(angle_deg * (std::numbers::pi / 180.0));
+    Mat4f translation = Mat4f::create_translation(Vec3f{ 0.0f, -0.7f, -5.0f });
+    //Mat4f rotation_x = Mat4f::create_rotation_x(angle_deg * (std::numbers::pi / 180.0));
     Mat4f rotation_y = Mat4f::create_rotation_y(angle_deg * (std::numbers::pi / 180.0));
     Mat4f rotation_z = Mat4f::create_rotation_z(angle_deg * (std::numbers::pi / 180.0));
+    Mat4f rotation_x = Mat4f::create_rotation_x(0 * (std::numbers::pi / 180.0));
+    //Mat4f rotation_y = Mat4f::create_rotation_y(0 * (std::numbers::pi / 180.0));
+    //Mat4f rotation_z = Mat4f::create_rotation_z(0 * (std::numbers::pi / 180.0));
 
     for (unsigned int i = 0; i != mesh->mNumFaces; i++)
     {
