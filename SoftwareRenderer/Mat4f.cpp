@@ -43,3 +43,18 @@ Mat4f Mat4f::create_viewport(int w, int h)
 
     return mat_view;
 }
+
+Mat4f Mat4f::create_translation(const Vec3f& v)
+{
+    Mat4f mat_trans{ 0.0f };
+    mat_trans.data[0] = 1.0f;
+    mat_trans.data[5] = 1.0f;
+    mat_trans.data[10] = 1.0f;
+    mat_trans.data[15] = 1.0f;
+
+    mat_trans.data[12] = v.x;
+    mat_trans.data[13] = v.y;
+    mat_trans.data[14] = v.z;
+
+    return mat_trans;
+}

@@ -52,9 +52,9 @@ int main()
 
     sf::Texture texture;
     //if (!texture.loadFromFile("data/african_head_diffuse.tga"))
-    //if (!texture.loadFromFile("data/box_textured/textures/uv_map.jpg"))
+    if (!texture.loadFromFile("data/box_textured/textures/uv_map.jpg"))
         //if (!texture.loadFromFile("data/rubber_duck/textures/Duck_baseColor.png"))
-        if (!texture.loadFromFile("data/pony_cartoon/textures/Body_SG1_baseColor.jpeg"))
+        //if (!texture.loadFromFile("data/pony_cartoon/textures/Body_SG1_baseColor.jpeg"))
         //if (!texture.loadFromFile("data/prime1_studios_joker/textures/tex_u1_v1_baseColor.jpeg"))
     {
         std::cerr << "Failed to load texture" << std::endl;
@@ -63,9 +63,9 @@ int main()
     sf::Image image = texture.copyToImage();
     p_image = &image;
 
-    //import_model_and_draw("data/box_textured/scene.gltf", frame_buffer);
+    import_model_and_draw("data/box_textured/scene.gltf", frame_buffer);
     //import_model_and_draw("data/rubber_duck/scene.gltf", frame_buffer);
-    import_model_and_draw("data/pony_cartoon/scene.gltf", frame_buffer);
+    //import_model_and_draw("data/pony_cartoon/scene.gltf", frame_buffer);
     //import_model_and_draw("data/prime1_studios_joker/scene.gltf", frame_buffer);
     //import_model_and_draw("data/african_head.obj", frame_buffer);
     //import_model_and_draw("data/wheelretopopbr/scene.gltf", frame_buffer);
@@ -255,6 +255,7 @@ bool import_model_and_draw(const std::string& modelpath, sf::VertexArray& frame_
 
     Mat4f persp_proj = Mat4f::create_perspective(50.0f * (std::numbers::pi / 180.0f), w / (float)h, -0.1f, -100.0f);
     Mat4f view = Mat4f::create_viewport(w, h);
+    Mat4f translation = Mat4f::create_translation(Vec3f{1.0f, 0.0f, -3.0f});
     for (unsigned int i = 0; i != mesh->mNumFaces; i++)
     {
         const aiFace& face = mesh->mFaces[i];
@@ -265,9 +266,9 @@ bool import_model_and_draw(const std::string& modelpath, sf::VertexArray& frame_
         {
             const aiVector3D va = mesh->mVertices[idx[j]];
 
-            //Vec4f v4{ va.x, va.y - 0.8f, va.z - 3 };
-            Vec4f v4{ va.x, va.y, va.z-3 };
-            Vec4f in_clip_space = persp_proj * v4;
+            Vec4f v4{ va.x, va.y-0.8f, va.z };
+            Vec4f translated = translation * v4;
+            Vec4f in_clip_space = persp_proj * translated;
             Vec4f in_ndc = in_clip_space / in_clip_space.w;
             Vec3f in_screen = view * in_ndc;
 

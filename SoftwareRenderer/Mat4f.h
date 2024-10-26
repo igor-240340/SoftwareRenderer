@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Vec4f.h"
+#include "Vec3f.h"
 
 // Column-major order.
 class Mat4f {
@@ -13,6 +14,7 @@ public:
 
     static Mat4f create_perspective(float fov_vert_rad, float aspect_ratio, float near, float far);
     static Mat4f create_viewport(int w, int h);
+    static Mat4f create_translation(const Vec3f& v);
 
 private:
     float data[16];
