@@ -17,6 +17,7 @@
 #include "Vec3f.h"
 #include "Vertex.h"
 #include "Mat4f.h"
+#include "Camera.h"
 
 constexpr int w = 1024;
 constexpr int h = 768;
@@ -38,6 +39,24 @@ std::array<float, w* h> depth_buffer;
 
 sf::Image* p_image;
 
+Camera cam{
+    Vec3f(1.0f, 2.0f, 2.0f),
+    (90.0 + 10.0) * (std::numbers::pi / 180.0),
+    (90.0 + 45.0) * (std::numbers::pi / 180.0)
+};
+
+//Camera cam{
+//    Vec3f(2.0f, 0.0f, -3.0f),
+//    (180.0 + 90.0) * (std::numbers::pi / 180.0),
+//    (90.0) * (std::numbers::pi / 180.0)
+//};
+
+//Camera cam{
+//    Vec3f(-6.0f, 4.0f, 2.0f),
+//    106.7194 * (std::numbers::pi / 180.0),
+//    109.7616 * (std::numbers::pi / 180.0)
+//};
+
 int main()
 {
     depth_buffer.fill(-std::numeric_limits<float>::max());
@@ -54,8 +73,8 @@ int main()
     //if (!texture.loadFromFile("data/boxer/textures/material_0_baseColor.jpeg"))
     //if (!texture.loadFromFile("data/african_head_diffuse.tga"))
     //if (!texture.loadFromFile("data/box_textured/textures/uv_map.jpg"))
-        //if (!texture.loadFromFile("data/rubber_duck/textures/Duck_baseColor.png"))
-        if (!texture.loadFromFile("data/pony_cartoon/textures/Body_SG1_baseColor.jpeg"))
+        if (!texture.loadFromFile("data/rubber_duck/textures/Duck_baseColor.png"))
+    //if (!texture.loadFromFile("data/pony_cartoon/textures/Body_SG1_baseColor.jpeg"))
         //if (!texture.loadFromFile("data/prime1_studios_joker/textures/tex_u1_v1_baseColor.jpeg"))
     {
         std::cerr << "Failed to load texture" << std::endl;
@@ -86,11 +105,11 @@ int main()
 
     // Импорт меша.
     Assimp::Importer importer;
-    const aiScene* scene = importer.ReadFile("data/pony_cartoon/scene.gltf",
-    //const aiScene* scene = importer.ReadFile("data/box_textured/scene.gltf",
     //const aiScene* scene = importer.ReadFile("data/pony_cartoon/scene.gltf",
-    //const aiScene* scene = importer.ReadFile("data/boxer/scene.gltf",
-    //const aiScene* scene = importer.ReadFile("data/rubber_duck/scene.gltf",
+    //const aiScene* scene = importer.ReadFile("data/box_textured/scene.gltf",
+        //const aiScene* scene = importer.ReadFile("data/pony_cartoon/scene.gltf",
+        //const aiScene* scene = importer.ReadFile("data/boxer/scene.gltf",
+        const aiScene* scene = importer.ReadFile("data/rubber_duck/scene.gltf",
         aiProcess_CalcTangentSpace |
         aiProcess_Triangulate |
         aiProcess_JoinIdenticalVertices |
@@ -264,47 +283,50 @@ void draw_line(Vec2i a, Vec2i b, sf::VertexArray& frame_buffer, float intensity,
     }
 }
 
-bool draw_rotate(const aiMesh* mesh, sf::VertexArray& frame_buffer, float angle_deg)
-{
-    Mat4f persp_proj = Mat4f::create_perspective(50.0 * (std::numbers::pi / 180.0), w / (float)h, -1.0f, -50.0f);
-    Mat4f view = Mat4f::create_viewport(w, h);
-    Mat4f translation = Mat4f::create_translation(Vec3f{ 0.0f, -0.7f, -5.0f });
-    //Mat4f rotation_x = Mat4f::create_rotation_x(angle_deg * (std::numbers::pi / 180.0));
-    Mat4f rotation_y = Mat4f::create_rotation_y(angle_deg * (std::numbers::pi / 180.0));
-    Mat4f rotation_z = Mat4f::create_rotation_z(angle_deg * (std::numbers::pi / 180.0));
-    Mat4f rotation_x = Mat4f::create_rotation_x(0 * (std::numbers::pi / 180.0));
-    //Mat4f rotation_y = Mat4f::create_rotation_y(0 * (std::numbers::pi / 180.0));
-    //Mat4f rotation_z = Mat4f::create_rotation_z(0 * (std::numbers::pi / 180.0));
+bool draw_rotate(const aiMesh* mesh, sf::VertexArray& frame_buffer, float angle_deg) {
+    Mat4f persp_proj = Mat4f::create_perspective(45.0 * (std::numbers::pi / 180.0), w / (float)h, -1.0f, -50.0f);
+    Mat4f viewport = Mat4f::create_viewport(w, h);
 
-    for (unsigned int i = 0; i != mesh->mNumFaces; i++)
-    {
+    //Mat4f translation = Mat4f::create_translation(Vec3f{ -8.4496f, 0.0f, -6.9425f });
+    Mat4f translation = Mat4f::create_identity();
+    Mat4f rotation_x = Mat4f::create_identity();
+    //Mat4f rotation_x = Mat4f::create_rotation_x(0 * (std::numbers::pi / 180.0));
+    //Mat4f rotation_y = Mat4f::create_rotation_y(45.0 * (std::numbers::pi / 180.0));
+    Mat4f rotation_y = Mat4f::create_identity();
+    Mat4f rotation_z = Mat4f::create_identity();
+    //Mat4f rotation_z = Mat4f::create_rotation_z(angle_deg * (std::numbers::pi / 180.0));
+
+    for (unsigned int i = 0; i != mesh->mNumFaces; i++) {
         const aiFace& face = mesh->mFaces[i];
         const unsigned int idx[3] = { face.mIndices[0], face.mIndices[1], face.mIndices[2] };
         std::vector<Vertex> triangle_vertices;
         std::vector<Vec3f> triangle_vertices_orig;
-        for (int j = 0; j != 3; j++)
-        {
+        for (int j = 0; j != 3; j++) {
             const aiVector3D va = mesh->mVertices[idx[j]];
 
             Vec4f v4{ va.x, va.y, va.z };
 
             // Сначала translation, потом rotation.
             //Vec4f translated = translation * v4;
-            //Vec4f rotated = rotation_z * translated;
+            //Vec4f rotated = rotation_y * translated;
             //Vec4f in_clip_space = persp_proj * rotated;
 
             // Сначала rotation, потом translation.
-            Vec4f rotated = rotation_x * v4;
-            rotated = rotation_y * rotated;
-            rotated = rotation_z * rotated;
+            Vec4f rotated = rotation_y * v4;
+            //rotated = rotation_y * rotated;
+            //rotated = rotation_z * rotated;
             Vec4f translated = translation * rotated;
 
-            Vec3f tranformed_orig = translated;
+            Mat4f view_mat = cam.get_view_mat();
+            Vec4f in_cam_space = view_mat * translated;
+
+            // Для корректного расчета освещенности.
+            Vec3f tranformed_orig = in_cam_space;
             triangle_vertices_orig.push_back(Vec3f(tranformed_orig.x, tranformed_orig.y, tranformed_orig.z));
 
-            Vec4f in_clip_space = persp_proj * translated;
+            Vec4f in_clip_space = persp_proj * in_cam_space;
             Vec4f in_ndc = in_clip_space / in_clip_space.w;
-            Vec3f in_screen = view * in_ndc;
+            Vec3f in_screen = viewport * in_ndc;
 
             aiVector3D uv = mesh->mTextureCoords[0][idx[j]];
             float u = uv.x;
@@ -316,11 +338,11 @@ bool draw_rotate(const aiMesh* mesh, sf::VertexArray& frame_buffer, float angle_
 
         Vec3f vector_a = triangle_vertices_orig[1] - triangle_vertices_orig[0];
         Vec3f vector_b = triangle_vertices_orig[2] - triangle_vertices_orig[0];
-        Vec3f face_normal = Vec3f::cross(vector_a, vector_b).normalized();
-        Vec3f light_dir(0.0f, 0.0f, -1.0f);
+        Vec3f face_normal = Vec3f::cross(vector_a, vector_b).get_normalized();
+        //Vec3f face_normal = Vec3f::cross(vector_b, vector_a).get_normalized();
+        Vec3f light_dir = Vec3f(0.0f, 0.0f, -1.0f);
         float intensity = Vec3f::dot(face_normal, light_dir);
-        if (intensity < 0)
-        {
+        if (intensity < 0) {
             draw_triangle(triangle_vertices[0], triangle_vertices[1], triangle_vertices[2], frame_buffer, std::abs(intensity), true);
         }
     }

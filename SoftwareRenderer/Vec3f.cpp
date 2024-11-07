@@ -3,6 +3,7 @@
 #include "Vec3f.h"
 
 const Vec3f Vec3f::zero{ 0.0f, 0.0f, 0.0f };
+const Vec3f Vec3f::up{ 0.0f, 1.0f, 0.0f };
 
 Vec3f::Vec3f(float x, float y, float z) : x(x), y(y), z(z) {
 }
@@ -18,12 +19,8 @@ float Vec3f::length_squared() const {
     return x * x + y * y + z * z;
 }
 
-Vec3f Vec3f::normalized() const {
-    // Исключаем появление nan в компонентах вектора.
-    if (x * x + y * y + z * z > 0)
-        return *this / length();
-    else
-        return Vec3f::zero;
+Vec3f Vec3f::get_normalized() const {
+    return *this / length();
 }
 
 Vec3f Vec3f::operator/(float scalar) const {
@@ -53,4 +50,8 @@ float Vec3f::dot(const Vec3f& a, const Vec3f& b) {
 
 Vec3f Vec3f::cross(const Vec3f& a, const Vec3f& b) {
     return Vec3f(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x);
+}
+
+Vec3f operator*(float scalar, const Vec3f& vec) {
+    return vec * scalar;
 }

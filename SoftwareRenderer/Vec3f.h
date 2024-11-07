@@ -10,6 +10,7 @@ public:
 
 public:
     static const Vec3f zero;
+    static const Vec3f up;
 
 public:
     Vec3f() = default;
@@ -19,13 +20,15 @@ public:
 
     float length() const;
     float length_squared() const;
-    Vec3f normalized() const;
+    Vec3f get_normalized() const;
 
     Vec3f operator/(float scalar) const;
     Vec3f operator+(const Vec3f& b) const;
     Vec3f operator-(const Vec3f& b) const;
     Vec3f operator*(float scalar) const;
     Vec3f operator-() const;
+
+    friend Vec3f operator*(float scalar, const Vec3f& vec);
 
     static float dot(const Vec3f& a, const Vec3f& b);
     static Vec3f cross(const Vec3f& a, const Vec3f& b);
