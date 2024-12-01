@@ -96,6 +96,15 @@ int main() {
     }
     const aiMesh* mesh = scene->mMeshes[0];
 
+    //
+    depth_buffer.fill(-std::numeric_limits<float>::max());
+    for (int i = 0; i < w * h; i++) {
+        frame_buffer[i].color = sf::Color::White;
+    }
+
+    draw_rotate(mesh, frame_buffer, 0.0f);
+    //
+
     float angle = 0.0f;
     while (window.isOpen()) {
         sf::Event event;
@@ -106,12 +115,14 @@ int main() {
 
         window.clear(sf::Color::White);
 
+        /*
         depth_buffer.fill(-std::numeric_limits<float>::max());
         for (int i = 0; i < w * h; i++) {
             frame_buffer[i].color = sf::Color::White;
         }
 
         draw_rotate(mesh, frame_buffer, angle += 1.5f);
+        */
 
         window.draw(frame_buffer);
         window.display();
@@ -172,6 +183,8 @@ bool draw_rotate(const aiMesh* mesh, sf::VertexArray& frame_buffer, float angle_
             Vertex vt{ in_screen, u, v };
             triangle_vertices.push_back(vt);
         }
+
+        //
 
         Vec3f vector_a = triangle_vertices_orig[1] - triangle_vertices_orig[0];
         Vec3f vector_b = triangle_vertices_orig[2] - triangle_vertices_orig[0];
