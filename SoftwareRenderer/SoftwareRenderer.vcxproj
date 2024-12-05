@@ -140,7 +140,7 @@
     <ClCompile Include="Mat4f.cpp" />
     <ClCompile Include="Vec3f.cpp" />
     <ClCompile Include="Vec4f.cpp" />
-    <ClCompile Include="Vertex.cpp" />
+    <ClCompile Include="Vertex4.h" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Camera.h" />

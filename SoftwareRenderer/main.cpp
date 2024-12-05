@@ -18,6 +18,7 @@
 #include "Vertex.h"
 #include "Mat4f.h"
 #include "Camera.h"
+#include "Vertex4.h"
 
 constexpr int w = 1024;
 constexpr int h = 768;
@@ -29,13 +30,16 @@ bool draw_rotate(const aiMesh* mesh, sf::VertexArray& frame_buffer, float angle_
 float get_depth_for_fragment(int coord_x, int coord_y, Vec3f ta, Vec3f tb, Vec3f tc);
 void interpolate_uv(int fragment_coord_x, int fragment_coord_y, Vertex a, Vertex b, Vertex c, float& u, float& v);
 
+void draw_mesh(const aiMesh* mesh, sf::VertexArray& frame_buffer);
+void draw_line_color(Vec2i a, Vec2i b, sf::VertexArray& frame_buffer, const sf::Color& color);
+
 //std::random_device random_device;
 //std::mt19937 engine(random_device());
 //std::uniform_int_distribution<> distrib(0, 255);
 
 sf::RenderWindow* p_win;
 
-std::array<float, w * h> depth_buffer;
+std::array<float, w* h> depth_buffer;
 
 sf::Image* p_image;
 
@@ -102,7 +106,8 @@ int main() {
         frame_buffer[i].color = sf::Color::White;
     }
 
-    draw_rotate(mesh, frame_buffer, 0.0f);
+    //draw_rotate(mesh, frame_buffer, 0.0f);
+    draw_mesh(mesh, frame_buffer);
     //
 
     float angle = 0.0f;
@@ -200,6 +205,68 @@ bool draw_rotate(const aiMesh* mesh, sf::VertexArray& frame_buffer, float angle_
     return true;
 }
 
+void draw_mesh(const aiMesh* mesh, sf::VertexArray& frame_buffer) {
+    Mat4f persp_proj = Mat4f::create_perspective(45.0 * (std::numbers::pi / 180.0), w / (float)h, -10.0f, -50.0f);
+    Mat4f viewport = Mat4f::create_viewport(w, h);
+
+    Mat4f translation = Mat4f::create_identity();
+    Mat4f rotation_x = Mat4f::create_identity();
+    //Mat4f rotation_y = Mat4f::create_identity();
+    Mat4f rotation_y = Mat4f::create_rotation_y(10.0 * (std::numbers::pi / 180.0));
+    Mat4f rotation_z = Mat4f::create_identity();
+
+    std::vector<Vertex4> vertices;
+    vertices.reserve(mesh->mNumFaces * 3);
+
+    for (unsigned int i = 0; i != mesh->mNumFaces; i++) {
+        const aiFace& face = mesh->mFaces[i];
+        const unsigned int indices[3] = { face.mIndices[0], face.mIndices[1], face.mIndices[2] };
+
+        std::vector<Vertex> triangle_vertices;
+        std::vector<Vec3f> triangle_vertices_orig;
+        for (int j = 0; j != 3; j++) {
+            const aiVector3D orig_vertex = mesh->mVertices[indices[j]];
+
+            Vec4f orig_vertex_4{ orig_vertex.x, orig_vertex.y, orig_vertex.z };
+
+            Vec4f rotated = rotation_y * orig_vertex_4;
+            rotated = rotation_y * rotated;
+            rotated = rotation_z * rotated;
+
+            Vec4f translated = translation * rotated;
+
+            Mat4f view_mat = cam.get_view_mat();
+            Vec4f in_cam_space = view_mat * translated;
+
+            // Для корректного расчета освещенности.
+            Vec3f tranformed_orig = in_cam_space;
+            triangle_vertices_orig.push_back(Vec3f(tranformed_orig.x, tranformed_orig.y, tranformed_orig.z));
+
+            Vec4f in_clip_space = persp_proj * in_cam_space;
+            Vec4f in_ndc = in_clip_space / in_clip_space.w;
+            Vec3f in_screen = viewport * in_ndc;
+
+            aiVector3D uv = mesh->mTextureCoords[0][indices[j]];
+            float u = uv.x;
+            float v = uv.y;
+
+            Vertex vt{ in_screen, u, v }; // В экранных, z - нормализован.
+            triangle_vertices.push_back(vt);
+        }
+
+        Vec3f vector_a = triangle_vertices_orig[1] - triangle_vertices_orig[0];
+        Vec3f vector_b = triangle_vertices_orig[2] - triangle_vertices_orig[0];
+        Vec3f face_normal = Vec3f::cross(vector_a, vector_b).get_normalized();
+        //Vec3f face_normal = Vec3f::cross(vector_b, vector_a).get_normalized();
+        Vec3f light_dir = Vec3f(0.0f, 0.0f, -1.0f);
+        float intensity = Vec3f::dot(face_normal, light_dir);
+        // Backface culling.
+        //if (intensity < 0) {
+        draw_triangle(triangle_vertices[0], triangle_vertices[1], triangle_vertices[2], frame_buffer, std::abs(intensity), false);
+        //}
+    }
+}
+
 std::vector<int> interpolate_x(Vec2i a, Vec2i b) {
     std::vector<int> x_coords;
 
@@ -218,6 +285,65 @@ std::vector<int> interpolate_x(Vec2i a, Vec2i b) {
 
     // TODO: Посмотреть, как повлияет на производительность std::move().
     return x_coords;
+}
+
+void draw_line_color(Vec2i a, Vec2i b, sf::VertexArray& frame_buffer, const sf::Color& color) {
+    if (a.x == b.x && a.y == b.y) {
+        //std::cout << std::format("Line drawing from [{},{}] to [{},{}]\n", a.x, a.y, b.x, b.y);
+
+        sf::Vector2f pos(a.x, a.y);
+        int index = w * a.y + a.x; // Раскладываем строки буфера в горизонтальную линию.
+
+        pos.y = h - pos.y;
+        frame_buffer[index].position = pos;
+        frame_buffer[index].color = color;
+
+        //p_win->draw(frame_buffer);
+        //p_win->display();
+        //std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        return;
+    }
+
+    bool swapped = false;
+    if (std::abs(a.x - b.x) < std::abs(a.y - b.y)) {
+        std::swap(a.x, a.y);
+        std::swap(b.x, b.y);
+        swapped = true;
+    }
+
+    if (a.x > b.x) {
+        std::swap(a.x, b.x);
+        std::swap(a.y, b.y);
+    }
+
+    /*if (swapped)
+        std::cout << std::format("Line drawing from [{},{}] to [{},{}]\n", a.y, a.x, b.y, b.x);
+    else
+        std::cout << std::format("Line drawing from [{},{}] to [{},{}]\n", a.x, a.y, b.x, b.y);*/
+
+    for (int x = a.x; x <= b.x; x++) {
+        float x_way_percent = (x - a.x) / (float)(b.x - a.x);
+        int y = (b.y - a.y) * x_way_percent + a.y;
+
+        sf::Vector2f pos(x, y);
+        int index = w * y + x; // Раскладываем строки буфера в горизонтальную линию.
+
+        if (swapped)
+        {
+            pos.x = y;
+            pos.y = x;
+
+            index = w * x + y; // Был своп координат. Меняем, чтобы не перепутать строки со столбцами.
+        }
+
+        pos.y = h - pos.y; // В виртуальной СК начало координат в левом нижнем углу, а в мировой - в левом верхнем.
+        frame_buffer[index].position = pos;
+        frame_buffer[index].color = color;
+
+        //p_win->draw(frame_buffer);
+        //p_win->display();
+        //std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
 }
 
 void draw_line(Vec2i a, Vec2i b, sf::VertexArray& frame_buffer, float intensity, Vertex ta, Vertex tb, Vertex tc) {
@@ -380,9 +506,9 @@ void interpolate_uv(int fragment_coord_x, int fragment_coord_y, Vertex a, Vertex
 
 void draw_triangle(Vertex a, Vertex b, Vertex c, sf::VertexArray& frame_buffer, float intensity, bool filled) {
     if (!filled) {
-        /*draw_line(a, b, frame_buffer, color);
-        draw_line(b, c, frame_buffer, color);
-        draw_line(c, a, frame_buffer, color);*/
+        draw_line_color(Vec2i(a.pos.x, a.pos.y), Vec2i(b.pos.x, b.pos.y), frame_buffer, sf::Color::Black);
+        draw_line_color(Vec2i(b.pos.x, b.pos.y), Vec2i(c.pos.x, c.pos.y), frame_buffer, sf::Color::Black);
+        draw_line_color(Vec2i(c.pos.x, c.pos.y), Vec2i(a.pos.x, a.pos.y), frame_buffer, sf::Color::Black);
         return;
     }
 
