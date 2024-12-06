@@ -211,59 +211,47 @@ void draw_mesh(const aiMesh* mesh, sf::VertexArray& frame_buffer) {
 
     Mat4f translation = Mat4f::create_identity();
     Mat4f rotation_x = Mat4f::create_identity();
-    //Mat4f rotation_y = Mat4f::create_identity();
-    Mat4f rotation_y = Mat4f::create_rotation_y(10.0 * (std::numbers::pi / 180.0));
+    Mat4f rotation_y = Mat4f::create_identity();
+    //Mat4f rotation_y = Mat4f::create_rotation_y(10.0 * (std::numbers::pi / 180.0));
     Mat4f rotation_z = Mat4f::create_identity();
 
-    std::vector<Vertex4> vertices;
-    vertices.reserve(mesh->mNumFaces * 3);
-
+    std::vector<Vertex4> vertices_in_cam_space;
+    vertices_in_cam_space.reserve(mesh->mNumFaces * 3);
     for (unsigned int i = 0; i != mesh->mNumFaces; i++) {
         const aiFace& face = mesh->mFaces[i];
         const unsigned int indices[3] = { face.mIndices[0], face.mIndices[1], face.mIndices[2] };
 
-        std::vector<Vertex> triangle_vertices;
-        std::vector<Vec3f> triangle_vertices_orig;
-        for (int j = 0; j != 3; j++) {
+        for (unsigned int j = 0; j != 3; j++) {
             const aiVector3D orig_vertex = mesh->mVertices[indices[j]];
+            const aiVector3D uv = mesh->mTextureCoords[0][indices[j]];
 
-            Vec4f orig_vertex_4{ orig_vertex.x, orig_vertex.y, orig_vertex.z };
+            Vertex4 vertex{
+                Vec4f{orig_vertex.x, orig_vertex.y, orig_vertex.z},
+                uv.x,
+                uv.y
+            };
 
-            Vec4f rotated = rotation_y * orig_vertex_4;
-            rotated = rotation_y * rotated;
-            rotated = rotation_z * rotated;
+            vertex.pos = rotation_x * vertex.pos;
+            vertex.pos = rotation_y * vertex.pos;
+            vertex.pos = rotation_z * vertex.pos;
 
-            Vec4f translated = translation * rotated;
+            vertex.pos = translation * vertex.pos;
 
             Mat4f view_mat = cam.get_view_mat();
-            Vec4f in_cam_space = view_mat * translated;
+            vertex.pos = view_mat * vertex.pos;
 
-            // Для корректного расчета освещенности.
-            Vec3f tranformed_orig = in_cam_space;
-            triangle_vertices_orig.push_back(Vec3f(tranformed_orig.x, tranformed_orig.y, tranformed_orig.z));
-
-            Vec4f in_clip_space = persp_proj * in_cam_space;
-            Vec4f in_ndc = in_clip_space / in_clip_space.w;
-            Vec3f in_screen = viewport * in_ndc;
-
-            aiVector3D uv = mesh->mTextureCoords[0][indices[j]];
-            float u = uv.x;
-            float v = uv.y;
-
-            Vertex vt{ in_screen, u, v }; // В экранных, z - нормализован.
-            triangle_vertices.push_back(vt);
+            vertices_in_cam_space.push_back(vertex);
         }
 
-        Vec3f vector_a = triangle_vertices_orig[1] - triangle_vertices_orig[0];
-        Vec3f vector_b = triangle_vertices_orig[2] - triangle_vertices_orig[0];
-        Vec3f face_normal = Vec3f::cross(vector_a, vector_b).get_normalized();
-        //Vec3f face_normal = Vec3f::cross(vector_b, vector_a).get_normalized();
-        Vec3f light_dir = Vec3f(0.0f, 0.0f, -1.0f);
-        float intensity = Vec3f::dot(face_normal, light_dir);
-        // Backface culling.
-        //if (intensity < 0) {
-        draw_triangle(triangle_vertices[0], triangle_vertices[1], triangle_vertices[2], frame_buffer, std::abs(intensity), false);
-        //}
+        // Вершины текущего полигона.
+        const int cur_poly_vert0_index = i * 3 + 0;
+        const int cur_poly_vert1_index = i * 3 + 1;
+        const int cur_poly_vert2_index = i * 3 + 2;
+        Vertex4 vert_0 = vertices_in_cam_space[cur_poly_vert0_index];
+        Vertex4 vert_1 = vertices_in_cam_space[cur_poly_vert1_index];
+        Vertex4 vert_2 = vertices_in_cam_space[cur_poly_vert2_index];
+
+
     }
 }
 
