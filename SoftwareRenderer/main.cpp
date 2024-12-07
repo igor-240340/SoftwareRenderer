@@ -19,6 +19,7 @@
 #include "Mat4f.h"
 #include "Camera.h"
 #include "Vertex4.h"
+#include "Polygon.h"
 
 constexpr int w = 1024;
 constexpr int h = 768;
@@ -215,12 +216,16 @@ void draw_mesh(const aiMesh* mesh, sf::VertexArray& frame_buffer) {
     //Mat4f rotation_y = Mat4f::create_rotation_y(10.0 * (std::numbers::pi / 180.0));
     Mat4f rotation_z = Mat4f::create_identity();
 
-    std::vector<Vertex4> vertices_in_cam_space;
-    vertices_in_cam_space.reserve(mesh->mNumFaces * 3);
+    const float far_clipping_plane_z = -50.0f;
+    const float near_clipping_plane_z = -10.0f;
+
+    std::vector<Polygon> polygons_in_cam_space;
+    polygons_in_cam_space.reserve(mesh->mNumFaces);
     for (unsigned int i = 0; i != mesh->mNumFaces; i++) {
         const aiFace& face = mesh->mFaces[i];
         const unsigned int indices[3] = { face.mIndices[0], face.mIndices[1], face.mIndices[2] };
 
+        Polygon polygon{};
         for (unsigned int j = 0; j != 3; j++) {
             const aiVector3D orig_vertex = mesh->mVertices[indices[j]];
             const aiVector3D uv = mesh->mTextureCoords[0][indices[j]];
@@ -240,19 +245,26 @@ void draw_mesh(const aiMesh* mesh, sf::VertexArray& frame_buffer) {
             Mat4f view_mat = cam.get_view_mat();
             vertex.pos = view_mat * vertex.pos;
 
-            vertices_in_cam_space.push_back(vertex);
+            polygon.vertices[j] = vertex;
         }
+        
+        // Полигон полностью за пределами дальней плоскости отсчечения?
+        //if (vert_0.pos.z < far_clipping_plane_z &&
+        //    vert_1.pos.z < far_clipping_plane_z &&
+        //    vert_2.pos.z < far_clipping_plane_z) {
+        //    // Cull the polygon.
+        //    continue;
+        //}
 
-        // Вершины текущего полигона.
-        const int cur_poly_vert0_index = i * 3 + 0;
-        const int cur_poly_vert1_index = i * 3 + 1;
-        const int cur_poly_vert2_index = i * 3 + 2;
-        Vertex4 vert_0 = vertices_in_cam_space[cur_poly_vert0_index];
-        Vertex4 vert_1 = vertices_in_cam_space[cur_poly_vert1_index];
-        Vertex4 vert_2 = vertices_in_cam_space[cur_poly_vert2_index];
-
-
+        polygons_in_cam_space.push_back(polygon);
     }
+
+    // Теперь у нас есть список полигонов в пространстве камеры.
+    // Все полигоны делятся на классы:
+    // 1. Исходные полигоны модели.
+    // 2. Усеченные полигоны модели (две вершины за пределами плоскости отсечения).
+    // 3. Усеченные полигоны модели + новые полигоны (одна вершина за пределами плоскости отсечения).
+    ;
 }
 
 std::vector<int> interpolate_x(Vec2i a, Vec2i b) {

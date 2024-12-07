@@ -153,6 +153,7 @@
   <ItemGroup>
     <ClInclude Include="Camera.h" />
     <ClInclude Include="Mat4f.h" />
+    <ClInclude Include="Polygon.h" />
     <ClInclude Include="Vec3f.h" />
     <ClInclude Include="Vec2i.h" />
     <ClInclude Include="Vec4f.h" />
