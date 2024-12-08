@@ -32,6 +32,7 @@ float get_depth_for_fragment(int coord_x, int coord_y, Vec3f ta, Vec3f tb, Vec3f
 void interpolate_uv(int fragment_coord_x, int fragment_coord_y, Vertex a, Vertex b, Vertex c, float& u, float& v);
 
 void draw_mesh(const aiMesh* mesh, sf::VertexArray& frame_buffer);
+bool is_backfaced(const Polygon& polygon_in_cam_space);
 void draw_line_color(Vec2i a, Vec2i b, sf::VertexArray& frame_buffer, const sf::Color& color);
 
 //std::random_device random_device;
@@ -208,19 +209,20 @@ bool draw_rotate(const aiMesh* mesh, sf::VertexArray& frame_buffer, float angle_
 
 void draw_mesh(const aiMesh* mesh, sf::VertexArray& frame_buffer) {
     Mat4f persp_proj = Mat4f::create_perspective(45.0 * (std::numbers::pi / 180.0), w / (float)h, -10.0f, -50.0f);
-    Mat4f viewport = Mat4f::create_viewport(w, h);
+    Mat4f viewport_mat = Mat4f::create_viewport(w, h);
 
     Mat4f translation = Mat4f::create_identity();
     Mat4f rotation_x = Mat4f::create_identity();
+    //Mat4f rotation_x = Mat4f::create_rotation_x(25.0 * (std::numbers::pi / 180.0));
     Mat4f rotation_y = Mat4f::create_identity();
-    //Mat4f rotation_y = Mat4f::create_rotation_y(10.0 * (std::numbers::pi / 180.0));
+    //Mat4f rotation_y = Mat4f::create_rotation_y(25.0 * (std::numbers::pi / 180.0));
     Mat4f rotation_z = Mat4f::create_identity();
 
     const float far_clipping_plane_z = -50.0f;
     const float near_clipping_plane_z = -10.0f;
 
-    std::vector<Polygon> polygons_in_cam_space;
-    polygons_in_cam_space.reserve(mesh->mNumFaces);
+    std::vector<Polygon> polygons;
+    polygons.reserve(mesh->mNumFaces);
     for (unsigned int i = 0; i != mesh->mNumFaces; i++) {
         const aiFace& face = mesh->mFaces[i];
         const unsigned int indices[3] = { face.mIndices[0], face.mIndices[1], face.mIndices[2] };
@@ -247,7 +249,9 @@ void draw_mesh(const aiMesh* mesh, sf::VertexArray& frame_buffer) {
 
             polygon.vertices[j] = vertex;
         }
-        
+
+        polygon.is_culled = is_backfaced(polygon);
+
         // Полигон полностью за пределами дальней плоскости отсчечения?
         //if (vert_0.pos.z < far_clipping_plane_z &&
         //    vert_1.pos.z < far_clipping_plane_z &&
@@ -256,15 +260,50 @@ void draw_mesh(const aiMesh* mesh, sf::VertexArray& frame_buffer) {
         //    continue;
         //}
 
-        polygons_in_cam_space.push_back(polygon);
+        // To clip space.
+        polygon.vertices[0].pos = persp_proj * polygon.vertices[0].pos;
+        polygon.vertices[1].pos = persp_proj * polygon.vertices[1].pos;
+        polygon.vertices[2].pos = persp_proj * polygon.vertices[2].pos;
+
+        // To ndc.
+        polygon.vertices[0].pos = polygon.vertices[0].pos / polygon.vertices[0].pos.w;
+        polygon.vertices[1].pos = polygon.vertices[1].pos / polygon.vertices[1].pos.w;
+        polygon.vertices[2].pos = polygon.vertices[2].pos / polygon.vertices[2].pos.w;
+
+        // To screen space.
+        polygon.vertices[0].pos = viewport_mat * polygon.vertices[0].pos;
+        polygon.vertices[1].pos = viewport_mat * polygon.vertices[1].pos;
+        polygon.vertices[2].pos = viewport_mat * polygon.vertices[2].pos;
+
+        polygons.push_back(polygon);
+
+        Vertex v0{ polygon.vertices[0].pos, polygon.vertices[0].u, polygon.vertices[0].v };
+        Vertex v1{ polygon.vertices[1].pos, polygon.vertices[1].u, polygon.vertices[1].v };
+        Vertex v2{ polygon.vertices[2].pos, polygon.vertices[2].u, polygon.vertices[2].v };
+        draw_triangle(v0, v1, v2, frame_buffer, 1.0f, false);
     }
 
     // Теперь у нас есть список полигонов в пространстве камеры.
     // Все полигоны делятся на классы:
-    // 1. Исходные полигоны модели.
-    // 2. Усеченные полигоны модели (две вершины за пределами плоскости отсечения).
+    // 1. Исходные полигоны модели, которые не подверглись ни клиппингу ни куллингу.
+    // 2. Усеченные полигоны модели (полигоны, две вершины которых оказались за пределами плоскости отсечения).
     // 3. Усеченные полигоны модели + новые полигоны (одна вершина за пределами плоскости отсечения).
-    ;
+    // 4. Полностью отброшенные полигоны (все вершины за пределами плоскости отсечения).
+    // 5. Полностью отброшенные полигоны (нелицевые полигоны).
+}
+
+bool is_backfaced(const Polygon& polygon_in_cam_space) {
+    Vec3f v0 = polygon_in_cam_space.vertices[0].pos;
+    Vec3f v1 = polygon_in_cam_space.vertices[1].pos;
+    Vec3f v2 = polygon_in_cam_space.vertices[2].pos;
+
+    Vec3f a = v1 - v0;
+    Vec3f b = v2 - v0;
+
+    Vec3f normal = Vec3f::cross(a, b);
+    Vec3f view{ 0.0f, 0.0f, 1.0f };
+
+    return Vec3f::dot(normal, view) <= 0.0f;
 }
 
 std::vector<int> interpolate_x(Vec2i a, Vec2i b) {

@@ -4,4 +4,5 @@
 
 struct Polygon {
     std::array<Vertex4, 3> vertices;
+    bool is_culled;
 };
