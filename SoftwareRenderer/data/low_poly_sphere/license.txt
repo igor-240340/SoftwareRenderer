@@ -1,0 +1,11 @@
+Model Information:
+* title:	S01C01 Low Poly Sphere
+* source:	https://sketchfab.com/3d-models/s01c01-low-poly-sphere-eba0867abf704221944e5eb6a77f335d
+* author:	thequinneffect (https://sketchfab.com/thequinneffect)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "S01C01 Low Poly Sphere" (https://sketchfab.com/3d-models/s01c01-low-poly-sphere-eba0867abf704221944e5eb6a77f335d) by thequinneffect (https://sketchfab.com/thequinneffect) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

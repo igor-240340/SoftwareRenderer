@@ -1,0 +1,11 @@
+Model Information:
+* title:	Cut Fish
+* source:	https://sketchfab.com/3d-models/cut-fish-c9bcb782e5ef4d37bd8671f1f82a0fbc
+* author:	Suushimi (https://sketchfab.com/Suushimi)
+
+Model License:
+* license type:	CC-BY-NC-4.0 (http://creativecommons.org/licenses/by-nc/4.0/)
+* requirements:	Author must be credited. No commercial use.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Cut Fish" (https://sketchfab.com/3d-models/cut-fish-c9bcb782e5ef4d37bd8671f1f82a0fbc) by Suushimi (https://sketchfab.com/Suushimi) licensed under CC-BY-NC-4.0 (http://creativecommons.org/licenses/by-nc/4.0/)

@@ -24,6 +24,11 @@
 constexpr int w = 1024;
 constexpr int h = 768;
 
+void print_float_as_hex(float* a) {
+    uint32_t int_rep = *(uint32_t*)a;
+    std::cout << std::hex << std::setfill('0') << std::setw(8) << int_rep << std::endl;
+}
+
 std::vector<int> interpolate_x(Vec2i a, Vec2i b);
 void draw_line(Vec2i a, Vec2i b, sf::VertexArray& frame_buffer, float intensity, Vertex ta, Vertex tb, Vertex tc);
 void draw_triangle(Vertex a, Vertex b, Vertex c, sf::VertexArray& frame_buffer, float intensity, bool filled = false);
@@ -81,6 +86,10 @@ int main() {
 
     sf::Texture texture;
     if (!texture.loadFromFile("data/box_textured/textures/uv_map.jpg")) {
+        //if (!texture.loadFromFile("data/cut_fish/textures/lambert2SG_baseColor.png")) {
+        //if (!texture.loadFromFile("data/soccer_ball/textures/Material.004_baseColor.png")) {
+        //if (!texture.loadFromFile("data/fuel_barrel/textures/FuelBarrel_baseColor.png")) {
+        //if (!texture.loadFromFile("data/low_poly_sphere/textures/earth.jpeg")) {
         std::cerr << "Failed to load texture" << std::endl;
         return -1;
     }
@@ -89,6 +98,10 @@ int main() {
 
     Assimp::Importer importer;
     const aiScene* scene = importer.ReadFile("data/box_textured/scene.gltf",
+        //const aiScene* scene = importer.ReadFile("data/cut_fish/scene.gltf",
+        //const aiScene* scene = importer.ReadFile("data/soccer_ball/scene.gltf",
+        //const aiScene* scene = importer.ReadFile("data/fuel_barrel/scene.gltf",
+        //const aiScene* scene = importer.ReadFile("data/low_poly_sphere/scene.gltf",
         aiProcess_CalcTangentSpace
         | aiProcess_Triangulate
         | aiProcess_JoinIdenticalVertices
@@ -212,10 +225,10 @@ void draw_mesh(const aiMesh* mesh, sf::VertexArray& frame_buffer) {
     Mat4f viewport_mat = Mat4f::create_viewport(w, h);
 
     Mat4f translation = Mat4f::create_identity();
-    Mat4f rotation_x = Mat4f::create_identity();
-    //Mat4f rotation_x = Mat4f::create_rotation_x(25.0 * (std::numbers::pi / 180.0));
-    Mat4f rotation_y = Mat4f::create_identity();
-    //Mat4f rotation_y = Mat4f::create_rotation_y(25.0 * (std::numbers::pi / 180.0));
+    //Mat4f rotation_x = Mat4f::create_identity();
+    Mat4f rotation_x = Mat4f::create_rotation_x(25.0 * (std::numbers::pi / 180.0));
+    //Mat4f rotation_y = Mat4f::create_identity();
+    Mat4f rotation_y = Mat4f::create_rotation_y(25.0 * (std::numbers::pi / 180.0));
     Mat4f rotation_z = Mat4f::create_identity();
 
     const float far_clipping_plane_z = -50.0f;
@@ -250,15 +263,21 @@ void draw_mesh(const aiMesh* mesh, sf::VertexArray& frame_buffer) {
             polygon.vertices[j] = vertex;
         }
 
-        polygon.is_culled = is_backfaced(polygon);
+        // Backface culling in camera space.
+        if (is_backfaced(polygon))
+            continue;
 
-        // Полигон полностью за пределами дальней плоскости отсчечения?
-        //if (vert_0.pos.z < far_clipping_plane_z &&
-        //    vert_1.pos.z < far_clipping_plane_z &&
-        //    vert_2.pos.z < far_clipping_plane_z) {
-        //    // Cull the polygon.
-        //    continue;
-        //}
+        // Far plane culling.
+        if (polygon.vertices[0].pos.z < far_clipping_plane_z &&
+            polygon.vertices[1].pos.z < far_clipping_plane_z &&
+            polygon.vertices[2].pos.z < far_clipping_plane_z)
+            continue;
+
+        // Near plane culling.
+        if (polygon.vertices[0].pos.z > near_clipping_plane_z &&
+            polygon.vertices[1].pos.z > near_clipping_plane_z &&
+            polygon.vertices[2].pos.z > near_clipping_plane_z)
+            continue;
 
         // To clip space.
         polygon.vertices[0].pos = persp_proj * polygon.vertices[0].pos;
@@ -303,7 +322,12 @@ bool is_backfaced(const Polygon& polygon_in_cam_space) {
     Vec3f normal = Vec3f::cross(a, b);
     Vec3f view{ 0.0f, 0.0f, 1.0f };
 
-    return Vec3f::dot(normal, view) <= 0.0f;
+    // TODO: Решить, что делать, когда результат близок к нулю,
+    // но тем не менее все еще больше эпсилон.
+    float proj = Vec3f::dot(normal, view);
+    //print_float_as_hex(&proj);
+
+    return  proj <= 0.0f;
 }
 
 std::vector<int> interpolate_x(Vec2i a, Vec2i b) {

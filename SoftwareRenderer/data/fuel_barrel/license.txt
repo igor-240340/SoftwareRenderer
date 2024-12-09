@@ -1,0 +1,11 @@
+Model Information:
+* title:	Fuel Barrel
+* source:	https://sketchfab.com/3d-models/fuel-barrel-55f313a9dfee4946b0a0dcb59704c2cb
+* author:	Emil Gilmutdinov (https://sketchfab.com/Emil_Gilmutdinov)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Fuel Barrel" (https://sketchfab.com/3d-models/fuel-barrel-55f313a9dfee4946b0a0dcb59704c2cb) by Emil Gilmutdinov (https://sketchfab.com/Emil_Gilmutdinov) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
