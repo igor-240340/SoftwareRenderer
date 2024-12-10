@@ -279,6 +279,11 @@ void draw_mesh(const aiMesh* mesh, sf::VertexArray& frame_buffer) {
             polygon.vertices[2].pos.z > near_clipping_plane_z)
             continue;
 
+        // X planes culling.
+        // Y planes culling.
+
+        // Near plane clipping.
+
         // To clip space.
         polygon.vertices[0].pos = persp_proj * polygon.vertices[0].pos;
         polygon.vertices[1].pos = persp_proj * polygon.vertices[1].pos;
