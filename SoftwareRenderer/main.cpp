@@ -283,6 +283,19 @@ void draw_mesh(const aiMesh* mesh, sf::VertexArray& frame_buffer) {
         // Y planes culling.
 
         // Near plane clipping.
+        int verts_out_count = 0;
+        verts_out_count += polygon.vertices[0].pos.z > near_clipping_plane_z;
+        verts_out_count += polygon.vertices[1].pos.z > near_clipping_plane_z;
+        verts_out_count += polygon.vertices[2].pos.z > near_clipping_plane_z;
+
+        // Простой случай - обновляем координаты "торчащих" вершин.
+        if (verts_out_count == 2) {
+            std::cout << "2";
+        }
+        // Случай посложней - у одного полигона обновляем одну координату
+        // и добавляем еще один полигон.
+        else if (verts_out_count == 1) {
+        }
 
         // To clip space.
         polygon.vertices[0].pos = persp_proj * polygon.vertices[0].pos;
