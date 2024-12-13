@@ -268,34 +268,57 @@ void draw_mesh(const aiMesh* mesh, sf::VertexArray& frame_buffer) {
             continue;
 
         // Far plane culling.
-        if (polygon.vertices[0].pos.z < far_clipping_plane_z &&
-            polygon.vertices[1].pos.z < far_clipping_plane_z &&
-            polygon.vertices[2].pos.z < far_clipping_plane_z)
+        if (polygon.vertices[0].pos.z <= far_clipping_plane_z &&
+            polygon.vertices[1].pos.z <= far_clipping_plane_z &&
+            polygon.vertices[2].pos.z <= far_clipping_plane_z)
             continue;
 
         // Near plane culling.
-        if (polygon.vertices[0].pos.z > near_clipping_plane_z &&
-            polygon.vertices[1].pos.z > near_clipping_plane_z &&
-            polygon.vertices[2].pos.z > near_clipping_plane_z)
+        if (polygon.vertices[0].pos.z >= near_clipping_plane_z &&
+            polygon.vertices[1].pos.z >= near_clipping_plane_z &&
+            polygon.vertices[2].pos.z >= near_clipping_plane_z)
             continue;
 
         // X planes culling.
         // Y planes culling.
 
-        // Near plane clipping.
+        // BEGIN: Near plane clipping.
+        // Определяем количество вершин снаружи.
         int verts_out_count = 0;
         verts_out_count += polygon.vertices[0].pos.z > near_clipping_plane_z;
         verts_out_count += polygon.vertices[1].pos.z > near_clipping_plane_z;
         verts_out_count += polygon.vertices[2].pos.z > near_clipping_plane_z;
 
-        // Простой случай - обновляем координаты "торчащих" вершин.
+        // Простой случай: две вершины снаружи - обновляем координаты "торчащих" вершин.
+        // Куллинг мы выполнили выше, поэтому, если две вершины торчат за ближней плоскостью,
+        // значит третья вершина точно внутри.
         if (verts_out_count == 2) {
-            std::cout << "2";
+            // Предполагаем по умолчанию такой расклад.
+            int vert_in_index = 0;
+            int vert_out_1_index = 1;
+            int vert_out_2_index = 2;
+
+            // Если вторая вершина внутри, значит две другие - снаружи.
+            if (polygon.vertices[1].pos.z < near_clipping_plane_z) {
+                vert_in_index = 1;
+                vert_out_1_index = 0;
+                vert_out_2_index = 2;
+            }
+            // Если третья вершина внутри, значит две другие - снаружи.
+            else if (polygon.vertices[2].pos.z < near_clipping_plane_z) {
+                vert_in_index = 2;
+                vert_out_1_index = 0;
+                vert_out_2_index = 1;
+            }
+
+            // Ищем две точки пересечения с ближней плоскостью
+            // и обновляем координаты торчащих вершин.
         }
-        // Случай посложней - у одного полигона обновляем одну координату
+        // Случай посложней: у одного полигона обновляем одну координату
         // и добавляем еще один полигон.
         else if (verts_out_count == 1) {
         }
+        // END: Near plane clipping.
 
         // To clip space.
         polygon.vertices[0].pos = persp_proj * polygon.vertices[0].pos;
