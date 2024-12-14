@@ -225,10 +225,10 @@ void draw_mesh(const aiMesh* mesh, sf::VertexArray& frame_buffer) {
     Mat4f viewport_mat = Mat4f::create_viewport(w, h);
 
     Mat4f translation = Mat4f::create_identity();
-    //Mat4f rotation_x = Mat4f::create_identity();
-    Mat4f rotation_x = Mat4f::create_rotation_x(25.0 * (std::numbers::pi / 180.0));
-    //Mat4f rotation_y = Mat4f::create_identity();
-    Mat4f rotation_y = Mat4f::create_rotation_y(25.0 * (std::numbers::pi / 180.0));
+    Mat4f rotation_x = Mat4f::create_identity();
+    //Mat4f rotation_x = Mat4f::create_rotation_x(25.0 * (std::numbers::pi / 180.0));
+    Mat4f rotation_y = Mat4f::create_identity();
+    //Mat4f rotation_y = Mat4f::create_rotation_y(25.0 * (std::numbers::pi / 180.0));
     Mat4f rotation_z = Mat4f::create_identity();
 
     const float far_clipping_plane_z = -50.0f;
@@ -311,8 +311,22 @@ void draw_mesh(const aiMesh* mesh, sf::VertexArray& frame_buffer) {
                 vert_out_2_index = 1;
             }
 
-            // Ищем две точки пересечения с ближней плоскостью
-            // и обновляем координаты торчащих вершин.
+            // Ищем первую точку пересечения и обновляем первую внешнюю вершину.
+            // NOTE: Определяем параметр t прямой, при котором точка
+            // лежит и на прямой и на ближней плоскости.
+            const Vec3f vert_in_pos = polygon.vertices[vert_in_index].pos;
+            const Vec3f vert_out_1_pos = polygon.vertices[vert_out_1_index].pos;
+            const Vec3f from_in_to_out_1 = vert_out_1_pos - vert_in_pos;
+            float line_param_t = (near_clipping_plane_z - vert_in_pos.z) / from_in_to_out_1.z;
+            const Vec3f intersection_point_1 = vert_in_pos + from_in_to_out_1 * line_param_t;
+            polygon.vertices[vert_out_1_index].pos = intersection_point_1;
+
+            // Ищем вторую точку пересечения и обновляем вторую внешнюю вершину.
+            const Vec3f vert_out_2_pos = polygon.vertices[vert_out_2_index].pos;
+            const Vec3f from_in_to_out_2 = vert_out_2_pos - vert_in_pos;
+            line_param_t = (near_clipping_plane_z - vert_in_pos.z) / from_in_to_out_2.z;
+            const Vec3f intersection_point_2 = vert_in_pos + from_in_to_out_2 * line_param_t;
+            polygon.vertices[vert_out_2_index].pos = intersection_point_2;
         }
         // Случай посложней: у одного полигона обновляем одну координату
         // и добавляем еще один полигон.
