@@ -283,6 +283,8 @@ void draw_mesh(const aiMesh* mesh, sf::VertexArray& frame_buffer) {
         // Y planes culling.
 
         // BEGIN: Near plane clipping.
+        // NOTE: Определяем параметр t прямой, при котором точка лежит и на прямой и на ближней плоскости.
+
         // Определяем количество вершин снаружи.
         int verts_out_count = 0;
         verts_out_count += polygon.vertices[0].pos.z > near_clipping_plane_z;
@@ -312,8 +314,6 @@ void draw_mesh(const aiMesh* mesh, sf::VertexArray& frame_buffer) {
             }
 
             // Ищем первую точку пересечения и обновляем первую внешнюю вершину.
-            // NOTE: Определяем параметр t прямой, при котором точка
-            // лежит и на прямой и на ближней плоскости.
             const Vec3f vert_in_pos = polygon.vertices[vert_in_index].pos;
             const Vec3f vert_out_1_pos = polygon.vertices[vert_out_1_index].pos;
             const Vec3f from_in_to_out_1 = vert_out_1_pos - vert_in_pos;
