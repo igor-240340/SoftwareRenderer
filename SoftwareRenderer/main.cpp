@@ -331,6 +331,36 @@ void draw_mesh(const aiMesh* mesh, sf::VertexArray& frame_buffer) {
         // Случай посложней: у одного полигона обновляем одну координату
         // и добавляем еще один полигон.
         else if (verts_out_count == 1) {
+            // Предполагаем по умолчанию такой расклад.
+            int vert_out_index = 0;
+            int vert_in_1_index = 1;
+            int vert_in_2_index = 2;
+
+            // Если вторая вершина снаружи, значит две другие - внутри.
+            if (polygon.vertices[1].pos.z > near_clipping_plane_z) {
+                vert_out_index = 1;
+                vert_in_1_index = 0;
+                vert_in_2_index = 2;
+            }
+            // Если третья вершина снаружи, значит две другие - внутри.
+            else if (polygon.vertices[2].pos.z > near_clipping_plane_z) {
+                vert_out_index = 2;
+                vert_in_1_index = 0;
+                vert_in_2_index = 1;
+            }
+
+            // Ищем первую точку пересечения.
+            const Vec3f vert_out_pos = polygon.vertices[vert_out_index].pos;
+            const Vec3f vert_in_1_pos = polygon.vertices[vert_in_1_index].pos;
+            Vec3f from_in_to_out = vert_out_pos - vert_in_1_pos;
+            float line_param_t = (near_clipping_plane_z - vert_in_1_pos.z) / from_in_to_out.z;
+            const Vec3f intersection_point_1 = vert_in_1_pos + from_in_to_out * line_param_t;
+
+            // Ищем вторую точку пересечения.
+            const Vec3f vert_in_2_pos = polygon.vertices[vert_in_2_index].pos;
+            from_in_to_out = vert_out_pos - vert_in_2_pos;
+            line_param_t = (near_clipping_plane_z - vert_in_2_pos.z) / from_in_to_out.z;
+            const Vec3f intersection_point_2 = vert_in_2_pos + from_in_to_out * line_param_t;
         }
         // END: Near plane clipping.
 
