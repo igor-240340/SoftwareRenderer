@@ -223,16 +223,16 @@ void draw_mesh(const aiMesh* mesh, sf::VertexArray& frame_buffer, float angle_de
     Mat4f viewport_mat = Mat4f::create_viewport(w, h);
 
     Mat4f translation = Mat4f::create_identity();
-    //Mat4f rotation_x = Mat4f::create_identity();
+    Mat4f rotation_x = Mat4f::create_identity();
     //Mat4f rotation_x = Mat4f::create_rotation_x(15.0 * (std::numbers::pi / 180.0));
-    Mat4f rotation_x = Mat4f::create_rotation_x(angle_deg * (std::numbers::pi / 180.0));
-    //Mat4f rotation_y = Mat4f::create_identity();
+    //Mat4f rotation_x = Mat4f::create_rotation_x(angle_deg * (std::numbers::pi / 180.0));
+    Mat4f rotation_y = Mat4f::create_identity();
     //Mat4f rotation_y = Mat4f::create_rotation_y(15.0 * (std::numbers::pi / 180.0));
-    Mat4f rotation_y = Mat4f::create_rotation_y(angle_deg * (std::numbers::pi / 180.0));
+    //Mat4f rotation_y = Mat4f::create_rotation_y(angle_deg * (std::numbers::pi / 180.0));
     Mat4f rotation_z = Mat4f::create_identity();
 
     const float far_clipping_plane_z = -50.0f;
-    const float near_clipping_plane_z = -9.0f;
+    const float near_clipping_plane_z = -10.0f;
 
     std::vector<Polygon> polygons;
     polygons.reserve(mesh->mNumFaces);
@@ -264,8 +264,8 @@ void draw_mesh(const aiMesh* mesh, sf::VertexArray& frame_buffer, float angle_de
         }
 
         // Backface culling in camera space.
-        if (is_backfaced(polygon))
-            continue;
+        /*if (is_backfaced(polygon))
+            continue;*/
 
         // Far plane culling.
         if (polygon.vertices[0].pos.z <= far_clipping_plane_z &&
