@@ -36,7 +36,7 @@ bool draw_rotate(const aiMesh* mesh, sf::VertexArray& frame_buffer, float angle_
 float get_depth_for_fragment(int coord_x, int coord_y, Vec3f ta, Vec3f tb, Vec3f tc);
 void interpolate_uv(int fragment_coord_x, int fragment_coord_y, Vertex a, Vertex b, Vertex c, float& u, float& v);
 
-void draw_mesh(const aiMesh* mesh, sf::VertexArray& frame_buffer);
+void draw_mesh(const aiMesh* mesh, sf::VertexArray& frame_buffer, float angle_deg);
 bool is_backfaced(const Polygon& polygon_in_cam_space);
 void draw_line_color(Vec2i a, Vec2i b, sf::VertexArray& frame_buffer, const sf::Color& color);
 
@@ -120,9 +120,8 @@ int main() {
     for (int i = 0; i < w * h; i++) {
         frame_buffer[i].color = sf::Color::White;
     }
-
     //draw_rotate(mesh, frame_buffer, 0.0f);
-    draw_mesh(mesh, frame_buffer);
+    //draw_mesh(mesh, frame_buffer, 0.0f);
     //
 
     float angle = 0.0f;
@@ -135,14 +134,13 @@ int main() {
 
         window.clear(sf::Color::White);
 
-        /*
         depth_buffer.fill(-std::numeric_limits<float>::max());
         for (int i = 0; i < w * h; i++) {
             frame_buffer[i].color = sf::Color::White;
         }
 
-        draw_rotate(mesh, frame_buffer, angle += 1.5f);
-        */
+        //draw_rotate(mesh, frame_buffer, angle += 1.5f);
+        draw_mesh(mesh, frame_buffer, angle += 0.5f);
 
         window.draw(frame_buffer);
         window.display();
@@ -220,19 +218,21 @@ bool draw_rotate(const aiMesh* mesh, sf::VertexArray& frame_buffer, float angle_
     return true;
 }
 
-void draw_mesh(const aiMesh* mesh, sf::VertexArray& frame_buffer) {
+void draw_mesh(const aiMesh* mesh, sf::VertexArray& frame_buffer, float angle_deg) {
     Mat4f persp_proj = Mat4f::create_perspective(45.0 * (std::numbers::pi / 180.0), w / (float)h, -10.0f, -50.0f);
     Mat4f viewport_mat = Mat4f::create_viewport(w, h);
 
     Mat4f translation = Mat4f::create_identity();
-    Mat4f rotation_x = Mat4f::create_identity();
-    //Mat4f rotation_x = Mat4f::create_rotation_x(25.0 * (std::numbers::pi / 180.0));
-    Mat4f rotation_y = Mat4f::create_identity();
-    //Mat4f rotation_y = Mat4f::create_rotation_y(25.0 * (std::numbers::pi / 180.0));
+    //Mat4f rotation_x = Mat4f::create_identity();
+    //Mat4f rotation_x = Mat4f::create_rotation_x(15.0 * (std::numbers::pi / 180.0));
+    Mat4f rotation_x = Mat4f::create_rotation_x(angle_deg * (std::numbers::pi / 180.0));
+    //Mat4f rotation_y = Mat4f::create_identity();
+    //Mat4f rotation_y = Mat4f::create_rotation_y(15.0 * (std::numbers::pi / 180.0));
+    Mat4f rotation_y = Mat4f::create_rotation_y(angle_deg * (std::numbers::pi / 180.0));
     Mat4f rotation_z = Mat4f::create_identity();
 
     const float far_clipping_plane_z = -50.0f;
-    const float near_clipping_plane_z = -10.0f;
+    const float near_clipping_plane_z = -9.0f;
 
     std::vector<Polygon> polygons;
     polygons.reserve(mesh->mNumFaces);
@@ -355,15 +355,25 @@ void draw_mesh(const aiMesh* mesh, sf::VertexArray& frame_buffer) {
             Vec3f from_in_to_out = vert_out_pos - vert_in_1_pos;
             float line_param_t = (near_clipping_plane_z - vert_in_1_pos.z) / from_in_to_out.z;
             const Vec3f intersection_point_1 = vert_in_1_pos + from_in_to_out * line_param_t;
+            polygon.vertices[vert_out_index].pos = intersection_point_1;
 
             // Ищем вторую точку пересечения.
             const Vec3f vert_in_2_pos = polygon.vertices[vert_in_2_index].pos;
             from_in_to_out = vert_out_pos - vert_in_2_pos;
             line_param_t = (near_clipping_plane_z - vert_in_2_pos.z) / from_in_to_out.z;
             const Vec3f intersection_point_2 = vert_in_2_pos + from_in_to_out * line_param_t;
+
+            Polygon new_poly{};
+            new_poly.vertices[0] = Vertex4{ vert_in_2_pos };
+            new_poly.vertices[1] = Vertex4{ intersection_point_1 };
+            new_poly.vertices[2] = Vertex4{ intersection_point_2 };
+
+            polygons.push_back(new_poly);
         }
+        polygons.push_back(polygon);
         // END: Near plane clipping.
 
+        /*
         // To clip space.
         polygon.vertices[0].pos = persp_proj * polygon.vertices[0].pos;
         polygon.vertices[1].pos = persp_proj * polygon.vertices[1].pos;
@@ -379,12 +389,11 @@ void draw_mesh(const aiMesh* mesh, sf::VertexArray& frame_buffer) {
         polygon.vertices[1].pos = viewport_mat * polygon.vertices[1].pos;
         polygon.vertices[2].pos = viewport_mat * polygon.vertices[2].pos;
 
-        polygons.push_back(polygon);
-
         Vertex v0{ polygon.vertices[0].pos, polygon.vertices[0].u, polygon.vertices[0].v };
         Vertex v1{ polygon.vertices[1].pos, polygon.vertices[1].u, polygon.vertices[1].v };
         Vertex v2{ polygon.vertices[2].pos, polygon.vertices[2].u, polygon.vertices[2].v };
         draw_triangle(v0, v1, v2, frame_buffer, 1.0f, false);
+        */
     }
 
     // Теперь у нас есть список полигонов в пространстве камеры.
@@ -394,6 +403,28 @@ void draw_mesh(const aiMesh* mesh, sf::VertexArray& frame_buffer) {
     // 3. Усеченные полигоны модели + новые полигоны (одна вершина за пределами плоскости отсечения).
     // 4. Полностью отброшенные полигоны (все вершины за пределами плоскости отсечения).
     // 5. Полностью отброшенные полигоны (нелицевые полигоны).
+
+    for (Polygon& polygon : polygons) {
+        // To clip space.
+        polygon.vertices[0].pos = persp_proj * polygon.vertices[0].pos;
+        polygon.vertices[1].pos = persp_proj * polygon.vertices[1].pos;
+        polygon.vertices[2].pos = persp_proj * polygon.vertices[2].pos;
+
+        // To ndc.
+        polygon.vertices[0].pos = polygon.vertices[0].pos / polygon.vertices[0].pos.w;
+        polygon.vertices[1].pos = polygon.vertices[1].pos / polygon.vertices[1].pos.w;
+        polygon.vertices[2].pos = polygon.vertices[2].pos / polygon.vertices[2].pos.w;
+
+        // To screen space.
+        polygon.vertices[0].pos = viewport_mat * polygon.vertices[0].pos;
+        polygon.vertices[1].pos = viewport_mat * polygon.vertices[1].pos;
+        polygon.vertices[2].pos = viewport_mat * polygon.vertices[2].pos;
+
+        Vertex v0{ polygon.vertices[0].pos, polygon.vertices[0].u, polygon.vertices[0].v };
+        Vertex v1{ polygon.vertices[1].pos, polygon.vertices[1].u, polygon.vertices[1].v };
+        Vertex v2{ polygon.vertices[2].pos, polygon.vertices[2].u, polygon.vertices[2].v };
+        draw_triangle(v0, v1, v2, frame_buffer, 1.0f, false);
+    }
 }
 
 bool is_backfaced(const Polygon& polygon_in_cam_space) {
