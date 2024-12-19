@@ -40,6 +40,8 @@ void draw_mesh(const aiMesh* mesh, sf::VertexArray& frame_buffer, float angle_de
 bool is_backfaced(const Polygon& polygon_in_cam_space);
 void draw_line_color(Vec2i a, Vec2i b, sf::VertexArray& frame_buffer, const sf::Color& color);
 
+void draw_mesh_(const aiMesh* mesh, sf::VertexArray& frame_buffer, const Vec3f& rotation, const Vec3f& translation);
+
 //std::random_device random_device;
 //std::mt19937 engine(random_device());
 //std::uniform_int_distribution<> distrib(0, 255);
@@ -140,7 +142,10 @@ int main() {
         }
 
         //draw_rotate(mesh, frame_buffer, angle += 1.5f);
-        draw_mesh(mesh, frame_buffer, angle += 0.5f);
+        angle += 1.0f;
+        //draw_mesh_(mesh, frame_buffer, Vec3f::zero, Vec3f::zero);
+
+        draw_mesh_(mesh, frame_buffer, Vec3f(0.0f, 0.0f, 0.0f), Vec3f(-6.0f, 0.0f, 0.0f));
 
         window.draw(frame_buffer);
         window.display();
@@ -218,6 +223,211 @@ bool draw_rotate(const aiMesh* mesh, sf::VertexArray& frame_buffer, float angle_
     return true;
 }
 
+void draw_mesh_(const aiMesh* mesh, sf::VertexArray& frame_buffer, const Vec3f& rotation, const Vec3f& translation) {
+    Mat4f persp_proj_mat = Mat4f::create_perspective(45.0 * (std::numbers::pi / 180.0), w / (float)h, -10.0f, -50.0f);
+    Mat4f viewport_mat = Mat4f::create_viewport(w, h);
+
+    Mat4f translation_mat = Mat4f::create_translation(translation);
+    Mat4f rotation_x_mat = Mat4f::create_rotation_y(rotation.x * (std::numbers::pi / 180.0));
+    Mat4f rotation_y_mat = Mat4f::create_rotation_y(rotation.y * (std::numbers::pi / 180.0));
+    Mat4f rotation_z_mat = Mat4f::create_rotation_z(rotation.z * (std::numbers::pi / 180.0));
+
+    const float far_clipping_plane_z = -50.0f;
+    const float near_clipping_plane_z = -10.0f;
+
+    std::vector<Polygon> polygons;
+    polygons.reserve(mesh->mNumFaces);
+    for (unsigned int i = 0; i != mesh->mNumFaces; i++) {
+        const aiFace& face = mesh->mFaces[i];
+        const unsigned int indices[3] = { face.mIndices[0], face.mIndices[1], face.mIndices[2] };
+
+        Polygon polygon{};
+        for (unsigned int j = 0; j != 3; j++) {
+            const aiVector3D orig_vertex = mesh->mVertices[indices[j]];
+            const aiVector3D uv = mesh->mTextureCoords[0][indices[j]];
+
+            Vertex4 vertex{
+                Vec4f{orig_vertex.x, orig_vertex.y, orig_vertex.z},
+                uv.x,
+                uv.y
+            };
+
+            vertex.pos = rotation_x_mat * vertex.pos;
+            vertex.pos = rotation_y_mat * vertex.pos;
+            vertex.pos = rotation_z_mat * vertex.pos;
+
+            vertex.pos = translation_mat * vertex.pos;
+
+            Mat4f view_mat = cam.get_view_mat();
+            vertex.pos = view_mat * vertex.pos;
+
+            polygon.vertices[j] = vertex;
+        }
+
+        // Backface culling in camera space.
+        /*if (is_backfaced(polygon))
+            continue;*/
+
+            // Far plane culling.
+        if (polygon.vertices[0].pos.z <= far_clipping_plane_z &&
+            polygon.vertices[1].pos.z <= far_clipping_plane_z &&
+            polygon.vertices[2].pos.z <= far_clipping_plane_z)
+            continue;
+
+        // Near plane culling.
+        if (polygon.vertices[0].pos.z >= near_clipping_plane_z &&
+            polygon.vertices[1].pos.z >= near_clipping_plane_z &&
+            polygon.vertices[2].pos.z >= near_clipping_plane_z)
+            continue;
+
+        // X planes culling.
+        // Y planes culling.
+
+        // BEGIN: Near plane clipping.
+        // NOTE: Определяем параметр t прямой, при котором точка лежит и на прямой и на ближней плоскости.
+
+        // Определяем количество вершин снаружи.
+        int verts_out_count = 0;
+        verts_out_count += polygon.vertices[0].pos.z > near_clipping_plane_z;
+        verts_out_count += polygon.vertices[1].pos.z > near_clipping_plane_z;
+        verts_out_count += polygon.vertices[2].pos.z > near_clipping_plane_z;
+
+        // Простой случай: две вершины снаружи - обновляем координаты "торчащих" вершин.
+        // Куллинг мы выполнили выше, поэтому, если две вершины торчат за ближней плоскостью,
+        // значит третья вершина точно внутри.
+        if (verts_out_count == 2) {
+            // Предполагаем по умолчанию такой расклад.
+            int vert_in_index = 0;
+            int vert_out_1_index = 1;
+            int vert_out_2_index = 2;
+
+            // Если вторая вершина внутри, значит две другие - снаружи.
+            if (polygon.vertices[1].pos.z < near_clipping_plane_z) {
+                vert_in_index = 1;
+                vert_out_1_index = 0;
+                vert_out_2_index = 2;
+            }
+            // Если третья вершина внутри, значит две другие - снаружи.
+            else if (polygon.vertices[2].pos.z < near_clipping_plane_z) {
+                vert_in_index = 2;
+                vert_out_1_index = 0;
+                vert_out_2_index = 1;
+            }
+
+            // Ищем первую точку пересечения и обновляем первую внешнюю вершину.
+            const Vec3f vert_in_pos = polygon.vertices[vert_in_index].pos;
+            const Vec3f vert_out_1_pos = polygon.vertices[vert_out_1_index].pos;
+            const Vec3f from_in_to_out_1 = vert_out_1_pos - vert_in_pos;
+            float line_param_t = (near_clipping_plane_z - vert_in_pos.z) / from_in_to_out_1.z;
+            const Vec3f intersection_point_1 = vert_in_pos + from_in_to_out_1 * line_param_t;
+            polygon.vertices[vert_out_1_index].pos = intersection_point_1;
+
+            // Ищем вторую точку пересечения и обновляем вторую внешнюю вершину.
+            const Vec3f vert_out_2_pos = polygon.vertices[vert_out_2_index].pos;
+            const Vec3f from_in_to_out_2 = vert_out_2_pos - vert_in_pos;
+            line_param_t = (near_clipping_plane_z - vert_in_pos.z) / from_in_to_out_2.z;
+            const Vec3f intersection_point_2 = vert_in_pos + from_in_to_out_2 * line_param_t;
+            polygon.vertices[vert_out_2_index].pos = intersection_point_2;
+        }
+        // Случай посложней: у одного полигона обновляем одну координату
+        // и добавляем еще один полигон.
+        else if (verts_out_count == 1) {
+            // Предполагаем по умолчанию такой расклад.
+            int vert_out_index = 0;
+            int vert_in_1_index = 1;
+            int vert_in_2_index = 2;
+
+            // Если вторая вершина снаружи, значит две другие - внутри.
+            if (polygon.vertices[1].pos.z > near_clipping_plane_z) {
+                vert_out_index = 1;
+                vert_in_1_index = 0;
+                vert_in_2_index = 2;
+            }
+            // Если третья вершина снаружи, значит две другие - внутри.
+            else if (polygon.vertices[2].pos.z > near_clipping_plane_z) {
+                vert_out_index = 2;
+                vert_in_1_index = 0;
+                vert_in_2_index = 1;
+            }
+
+            // Ищем первую точку пересечения.
+            const Vec3f vert_out_pos = polygon.vertices[vert_out_index].pos;
+            const Vec3f vert_in_1_pos = polygon.vertices[vert_in_1_index].pos;
+            Vec3f from_in_to_out = vert_out_pos - vert_in_1_pos;
+            float line_param_t = (near_clipping_plane_z - vert_in_1_pos.z) / from_in_to_out.z;
+            const Vec3f intersection_point_1 = vert_in_1_pos + from_in_to_out * line_param_t;
+            polygon.vertices[vert_out_index].pos = intersection_point_1;
+
+            // Ищем вторую точку пересечения.
+            const Vec3f vert_in_2_pos = polygon.vertices[vert_in_2_index].pos;
+            from_in_to_out = vert_out_pos - vert_in_2_pos;
+            line_param_t = (near_clipping_plane_z - vert_in_2_pos.z) / from_in_to_out.z;
+            const Vec3f intersection_point_2 = vert_in_2_pos + from_in_to_out * line_param_t;
+
+            Polygon new_poly{};
+            new_poly.vertices[0] = Vertex4{ vert_in_2_pos };
+            new_poly.vertices[1] = Vertex4{ intersection_point_1 };
+            new_poly.vertices[2] = Vertex4{ intersection_point_2 };
+
+            polygons.push_back(new_poly);
+        }
+        polygons.push_back(polygon);
+        // END: Near plane clipping.
+
+        /*
+        // To clip space.
+        polygon.vertices[0].pos = persp_proj * polygon.vertices[0].pos;
+        polygon.vertices[1].pos = persp_proj * polygon.vertices[1].pos;
+        polygon.vertices[2].pos = persp_proj * polygon.vertices[2].pos;
+
+        // To ndc.
+        polygon.vertices[0].pos = polygon.vertices[0].pos / polygon.vertices[0].pos.w;
+        polygon.vertices[1].pos = polygon.vertices[1].pos / polygon.vertices[1].pos.w;
+        polygon.vertices[2].pos = polygon.vertices[2].pos / polygon.vertices[2].pos.w;
+
+        // To screen space.
+        polygon.vertices[0].pos = viewport_mat * polygon.vertices[0].pos;
+        polygon.vertices[1].pos = viewport_mat * polygon.vertices[1].pos;
+        polygon.vertices[2].pos = viewport_mat * polygon.vertices[2].pos;
+
+        Vertex v0{ polygon.vertices[0].pos, polygon.vertices[0].u, polygon.vertices[0].v };
+        Vertex v1{ polygon.vertices[1].pos, polygon.vertices[1].u, polygon.vertices[1].v };
+        Vertex v2{ polygon.vertices[2].pos, polygon.vertices[2].u, polygon.vertices[2].v };
+        draw_triangle(v0, v1, v2, frame_buffer, 1.0f, false);
+        */
+    }
+
+    // Теперь у нас есть список полигонов в пространстве камеры.
+    // Все полигоны делятся на классы:
+    // 1. Исходные полигоны модели, которые не подверглись ни клиппингу ни куллингу.
+    // 2. Усеченные полигоны модели (полигоны, две вершины которых оказались за пределами плоскости отсечения).
+    // 3. Усеченные полигоны модели + новые полигоны (одна вершина за пределами плоскости отсечения).
+    // 4. Полностью отброшенные полигоны (все вершины за пределами плоскости отсечения).
+    // 5. Полностью отброшенные полигоны (нелицевые полигоны).
+
+    for (Polygon& polygon : polygons) {
+        // To clip space.
+        polygon.vertices[0].pos = persp_proj_mat * polygon.vertices[0].pos;
+        polygon.vertices[1].pos = persp_proj_mat * polygon.vertices[1].pos;
+        polygon.vertices[2].pos = persp_proj_mat * polygon.vertices[2].pos;
+
+        // To ndc.
+        polygon.vertices[0].pos = polygon.vertices[0].pos / polygon.vertices[0].pos.w;
+        polygon.vertices[1].pos = polygon.vertices[1].pos / polygon.vertices[1].pos.w;
+        polygon.vertices[2].pos = polygon.vertices[2].pos / polygon.vertices[2].pos.w;
+
+        // To screen space.
+        polygon.vertices[0].pos = viewport_mat * polygon.vertices[0].pos;
+        polygon.vertices[1].pos = viewport_mat * polygon.vertices[1].pos;
+        polygon.vertices[2].pos = viewport_mat * polygon.vertices[2].pos;
+
+        Vertex v0{ polygon.vertices[0].pos, polygon.vertices[0].u, polygon.vertices[0].v };
+        Vertex v1{ polygon.vertices[1].pos, polygon.vertices[1].u, polygon.vertices[1].v };
+        Vertex v2{ polygon.vertices[2].pos, polygon.vertices[2].u, polygon.vertices[2].v };
+        draw_triangle(v0, v1, v2, frame_buffer, 1.0f, false);
+    }
+}
+
 void draw_mesh(const aiMesh* mesh, sf::VertexArray& frame_buffer, float angle_deg) {
     Mat4f persp_proj = Mat4f::create_perspective(45.0 * (std::numbers::pi / 180.0), w / (float)h, -10.0f, -50.0f);
     Mat4f viewport_mat = Mat4f::create_viewport(w, h);
@@ -267,7 +477,7 @@ void draw_mesh(const aiMesh* mesh, sf::VertexArray& frame_buffer, float angle_de
         /*if (is_backfaced(polygon))
             continue;*/
 
-        // Far plane culling.
+            // Far plane culling.
         if (polygon.vertices[0].pos.z <= far_clipping_plane_z &&
             polygon.vertices[1].pos.z <= far_clipping_plane_z &&
             polygon.vertices[2].pos.z <= far_clipping_plane_z)
