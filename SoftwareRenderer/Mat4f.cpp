@@ -34,6 +34,7 @@ Mat4f Mat4f::create_perspective(float fov_vert_rad, float aspect_ratio, float ne
     mat_proj.data.at(10) = far / (far - near);
     mat_proj.data.at(11) = -1.0f;
     mat_proj.data.at(14) = -(far * near) / (far - near);
+    mat_proj.data.at(15) = 0.0f;
 
     return mat_proj;
 }

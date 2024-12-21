@@ -53,7 +53,7 @@ std::array<float, w* h> depth_buffer;
 sf::Image* p_image;
 
 Camera cam{
-    Vec3f(0.0f, 0.0f, 10.0f),
+    Vec3f(0.0f, 0.0f, 2.4142f), // У модели в GeoGebra позиция камеры выбрана не вполне удачно - не в нуле.
     (90.0 + 0.0) * (std::numbers::pi / 180.0),
     (90.0 + 0.0) * (std::numbers::pi / 180.0)
 };
@@ -145,7 +145,8 @@ int main() {
         angle += 1.0f;
         //draw_mesh_(mesh, frame_buffer, Vec3f::zero, Vec3f::zero);
 
-        draw_mesh_(mesh, frame_buffer, Vec3f(0.0f, 0.0f, 0.0f), Vec3f(-6.0f, 0.0f, 0.0f));
+        //draw_mesh_(mesh, frame_buffer, Vec3f(0.0f, 0.0f, 0.0f), Vec3f(-6.0f, 0.0f, 0.0f));
+        draw_mesh_(mesh, frame_buffer, Vec3f(0.0f, 0.0f, 0.0f), Vec3f(-5.0f, 0.0f, -5.5f));
 
         window.draw(frame_buffer);
         window.display();
@@ -224,7 +225,8 @@ bool draw_rotate(const aiMesh* mesh, sf::VertexArray& frame_buffer, float angle_
 }
 
 void draw_mesh_(const aiMesh* mesh, sf::VertexArray& frame_buffer, const Vec3f& rotation, const Vec3f& translation) {
-    Mat4f persp_proj_mat = Mat4f::create_perspective(45.0 * (std::numbers::pi / 180.0), w / (float)h, -10.0f, -50.0f);
+    //Mat4f persp_proj_mat = Mat4f::create_perspective(45.0 * (std::numbers::pi / 180.0), w / (float)h, -2.0f, -8.0f);
+    Mat4f persp_proj_mat = Mat4f::create_perspective(45.0 * (std::numbers::pi / 180.0), w / (float)h, -2.0f, -10.0f);
     Mat4f viewport_mat = Mat4f::create_viewport(w, h);
 
     Mat4f translation_mat = Mat4f::create_translation(translation);
@@ -232,8 +234,8 @@ void draw_mesh_(const aiMesh* mesh, sf::VertexArray& frame_buffer, const Vec3f& 
     Mat4f rotation_y_mat = Mat4f::create_rotation_y(rotation.y * (std::numbers::pi / 180.0));
     Mat4f rotation_z_mat = Mat4f::create_rotation_z(rotation.z * (std::numbers::pi / 180.0));
 
-    const float far_clipping_plane_z = -50.0f;
-    const float near_clipping_plane_z = -10.0f;
+    const float far_clipping_plane_z = -10.0f;
+    const float near_clipping_plane_z = -2.0f;
 
     std::vector<Polygon> polygons;
     polygons.reserve(mesh->mNumFaces);
