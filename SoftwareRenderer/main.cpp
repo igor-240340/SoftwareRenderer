@@ -146,7 +146,8 @@ int main() {
         //draw_mesh_(mesh, frame_buffer, Vec3f::zero, Vec3f::zero);
 
         //draw_mesh_(mesh, frame_buffer, Vec3f(0.0f, 0.0f, 0.0f), Vec3f(-6.0f, 0.0f, 0.0f));
-        draw_mesh_(mesh, frame_buffer, Vec3f(0.0f, 0.0f, 0.0f), Vec3f(-5.0f, 0.0f, -5.5f));
+        // Слегка повернули, чтобы боковые не отсеклись по backface culling.
+        draw_mesh_(mesh, frame_buffer, Vec3f(0.0f, -0.5f, 0.0f), Vec3f(-5.0f, 0.0f, -5.5f));
 
         window.draw(frame_buffer);
         window.display();
@@ -267,10 +268,10 @@ void draw_mesh_(const aiMesh* mesh, sf::VertexArray& frame_buffer, const Vec3f& 
         }
 
         // Backface culling in camera space.
-        /*if (is_backfaced(polygon))
-            continue;*/
+        //if (is_backfaced(polygon))
+            //continue;
 
-            // Far plane culling.
+        // Far plane culling.
         if (polygon.vertices[0].pos.z <= far_clipping_plane_z &&
             polygon.vertices[1].pos.z <= far_clipping_plane_z &&
             polygon.vertices[2].pos.z <= far_clipping_plane_z)
@@ -282,14 +283,28 @@ void draw_mesh_(const aiMesh* mesh, sf::VertexArray& frame_buffer, const Vec3f& 
             polygon.vertices[2].pos.z >= near_clipping_plane_z)
             continue;
 
-        // X planes culling.
+        // BEGIN: Left X plane culling.
+        const float d = 1.0f / std::tanf(45.0 * (std::numbers::pi / 180.0) / 2.0f);
+        const float left_plane_k = w / (h * d); // aspect_ratio / d;
+
+        int verts_out_count = 0;
+        verts_out_count += polygon.vertices[0].pos.x <= (polygon.vertices[0].pos.z * left_plane_k);
+        verts_out_count += polygon.vertices[1].pos.x <= (polygon.vertices[1].pos.z * left_plane_k);
+        verts_out_count += polygon.vertices[2].pos.x <= (polygon.vertices[2].pos.z * left_plane_k);
+        if (verts_out_count == 3)
+            continue;
+        // END: Left X plane culling.
+
+        // BEGIN: Right X plane culling.
+        // END: Right X plane culling.
+
         // Y planes culling.
 
         // BEGIN: Near plane clipping.
         // NOTE: Определяем параметр t прямой, при котором точка лежит и на прямой и на ближней плоскости.
 
         // Определяем количество вершин снаружи.
-        int verts_out_count = 0;
+        verts_out_count = 0;
         verts_out_count += polygon.vertices[0].pos.z > near_clipping_plane_z;
         verts_out_count += polygon.vertices[1].pos.z > near_clipping_plane_z;
         verts_out_count += polygon.vertices[2].pos.z > near_clipping_plane_z;
