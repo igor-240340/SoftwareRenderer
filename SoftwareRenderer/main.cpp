@@ -148,6 +148,9 @@ int main() {
         //draw_mesh_(mesh, frame_buffer, Vec3f(0.0f, 0.0f, 0.0f), Vec3f(-6.0f, 0.0f, 0.0f));
         // Слегка повернули, чтобы боковые не отсеклись по backface culling.
         draw_mesh_(mesh, frame_buffer, Vec3f(0.0f, -0.5f, 0.0f), Vec3f(-5.0f, 0.0f, -5.5f));
+        draw_mesh_(mesh, frame_buffer, Vec3f(0.0f, 0.5f, 0.0f), Vec3f(5.0f, 0.0f, -5.5f));
+        draw_mesh_(mesh, frame_buffer, Vec3f(0.0f, -0.0f, 0.0f), Vec3f(0.0f, 3.0f, -5.5f));
+        draw_mesh_(mesh, frame_buffer, Vec3f(0.0f, -0.0f, 0.0f), Vec3f(0.0f, -3.0f, -5.5f));
 
         window.draw(frame_buffer);
         window.display();
@@ -268,8 +271,8 @@ void draw_mesh_(const aiMesh* mesh, sf::VertexArray& frame_buffer, const Vec3f& 
         }
 
         // Backface culling in camera space.
-        //if (is_backfaced(polygon))
-            //continue;
+        if (is_backfaced(polygon))
+            continue;
 
         // Far plane culling.
         if (polygon.vertices[0].pos.z <= far_clipping_plane_z &&
@@ -296,9 +299,37 @@ void draw_mesh_(const aiMesh* mesh, sf::VertexArray& frame_buffer, const Vec3f& 
         // END: Left X plane culling.
 
         // BEGIN: Right X plane culling.
+        const float right_plane_k = -left_plane_k;
+
+        verts_out_count = 0;
+        verts_out_count += polygon.vertices[0].pos.x >= (polygon.vertices[0].pos.z * right_plane_k);
+        verts_out_count += polygon.vertices[1].pos.x >= (polygon.vertices[1].pos.z * right_plane_k);
+        verts_out_count += polygon.vertices[2].pos.x >= (polygon.vertices[2].pos.z * right_plane_k);
+        if (verts_out_count == 3)
+            continue;
         // END: Right X plane culling.
 
-        // Y planes culling.
+        // BEGIN: Top Y plane culling.
+        const float top_plane_k = -(1.0f / d); // Поскольку z-координаты вершин уже отрицательные.
+
+        verts_out_count = 0;
+        verts_out_count += polygon.vertices[0].pos.y >= (polygon.vertices[0].pos.z * top_plane_k);
+        verts_out_count += polygon.vertices[1].pos.y >= (polygon.vertices[1].pos.z * top_plane_k);
+        verts_out_count += polygon.vertices[2].pos.y >= (polygon.vertices[2].pos.z * top_plane_k);
+        if (verts_out_count == 3)
+            continue;
+        // END: Top Y plane culling.
+
+        // BEGIN: Bottom Y plane culling.
+        const float bottom_plane_k = -top_plane_k;
+
+        verts_out_count = 0;
+        verts_out_count += polygon.vertices[0].pos.y <= (polygon.vertices[0].pos.z * bottom_plane_k);
+        verts_out_count += polygon.vertices[1].pos.y <= (polygon.vertices[1].pos.z * bottom_plane_k);
+        verts_out_count += polygon.vertices[2].pos.y <= (polygon.vertices[2].pos.z * bottom_plane_k);
+        if (verts_out_count == 3)
+            continue;
+        // END: Bottom Y plane culling.
 
         // BEGIN: Near plane clipping.
         // NOTE: Определяем параметр t прямой, при котором точка лежит и на прямой и на ближней плоскости.
