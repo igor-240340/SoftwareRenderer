@@ -147,10 +147,11 @@ int main() {
 
         //draw_mesh_(mesh, frame_buffer, Vec3f(0.0f, 0.0f, 0.0f), Vec3f(-6.0f, 0.0f, 0.0f));
         // Слегка повернули, чтобы боковые не отсеклись по backface culling.
-        draw_mesh_(mesh, frame_buffer, Vec3f(0.0f, -0.5f, 0.0f), Vec3f(-5.0f, 0.0f, -5.5f));
-        draw_mesh_(mesh, frame_buffer, Vec3f(0.0f, 0.5f, 0.0f), Vec3f(5.0f, 0.0f, -5.5f));
-        draw_mesh_(mesh, frame_buffer, Vec3f(0.0f, -0.0f, 0.0f), Vec3f(0.0f, 3.0f, -5.5f));
-        draw_mesh_(mesh, frame_buffer, Vec3f(0.0f, -0.0f, 0.0f), Vec3f(0.0f, -3.0f, -5.5f));
+        //draw_mesh_(mesh, frame_buffer, Vec3f(0.0f, -0.5f, 0.0f), Vec3f(-5.0f, 0.0f, -5.5f));
+        //draw_mesh_(mesh, frame_buffer, Vec3f(0.0f, 0.5f, 0.0f), Vec3f(5.0f, 0.0f, -5.5f));
+        //draw_mesh_(mesh, frame_buffer, Vec3f(0.0f, 0.0f, 0.0f), Vec3f(0.0f, 3.0f, -5.5f));
+        //draw_mesh_(mesh, frame_buffer, Vec3f(0.0f, 0.0f, 0.0f), Vec3f(0.0f, -3.0f, -5.5f));
+        draw_mesh_(mesh, frame_buffer, Vec3f(10.0f, 15.0f, 13.0f), Vec3f(0.0f, 0.0f, -5.5f));
 
         window.draw(frame_buffer);
         window.display();
