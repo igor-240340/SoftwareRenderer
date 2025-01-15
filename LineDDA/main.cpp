@@ -7,6 +7,9 @@ constexpr unsigned int h = 600;
 
 void set_pixel_color(std::vector<sf::Uint8>& frame_buffer, int x, int y, sf::Color color);
 void fill_frame_buffer(std::vector<sf::Uint8>& frame_buffer, sf::Color color);
+void draw_line_dda(std::vector<sf::Uint8>& frame_buffer, int x0, int y0, int x1, int y1, sf::Color color);
+
+void test_draw_line_dda();
 
 int main() {
     sf::RenderWindow window(sf::VideoMode(w, h), "Line Drawing DDA");
@@ -28,7 +31,7 @@ int main() {
                 window.close();
         }
 
-        // Update frame_buffer.
+        draw_line_dda(frame_buffer, 33, 21, 33, 15, sf::Color::Black);
 
         texture.update(frame_buffer.data());
 
@@ -55,4 +58,18 @@ void fill_frame_buffer(std::vector<sf::Uint8>& frame_buffer, sf::Color color) {
         const int y = i / w;
         set_pixel_color(frame_buffer, x, y, color);
     }
+}
+
+void draw_line_dda(std::vector<sf::Uint8>& frame_buffer, int x0, int y0, int x1, int y1, sf::Color color) {
+    const bool vertical = (x0 == x1);
+    if (vertical) {
+        const bool top_down = (y0 > y1);
+        if (top_down) {
+            std::swap(y0, y1);
+            std::swap(x0, x1);
+        }
+    }
+}
+
+void test_draw_line_dda() {
 }
