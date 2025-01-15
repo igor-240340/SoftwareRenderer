@@ -1,3 +1,9 @@
 ﻿.vs/
+Debug/
+Release/
 x64/
+x86/
 *.bat
+
+# LibreOffice lock file.
+**/.~lock*
