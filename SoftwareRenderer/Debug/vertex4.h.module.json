@@ -1,0 +1,22 @@
+{
+    "version": 1,
+    "revision": 0,
+    "rules": [
+        {
+            "primary-output": "Debug\\Vertex4.h.obj",
+            "outputs": [
+                "E:\\dev\\GitHub\\My\\SoftwareRenderer\\SoftwareRenderer\\Debug\\vc143.pdb",
+                "Debug\\",
+                "E:\\dev\\GitHub\\My\\SoftwareRenderer\\SoftwareRenderer\\Debug\\Vertex4.h.ifc"
+            ],
+            "provides": [
+                {
+                    "logical-name": "Vertex4.h",
+                    "source-path": "e:\\dev\\github\\my\\softwarerenderer\\softwarerenderer\\vertex4.h",
+                    "lookup-method": "absolute"
+                }
+            ],
+            "requires": []
+        }
+    ]
+}

@@ -1,0 +1,12 @@
+{
+    "Version": "1.2",
+    "Data": {
+        "Source": "e:\\dev\\github\\my\\softwarerenderer\\softwarerenderer\\vertex4.h",
+        "ProvidedModule": "",
+        "Includes": [
+            "e:\\dev\\github\\my\\softwarerenderer\\softwarerenderer\\vec4f.h"
+        ],
+        "ImportedModules": [],
+        "ImportedHeaderUnits": []
+    }
+}
