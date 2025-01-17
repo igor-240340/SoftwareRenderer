@@ -13,7 +13,10 @@ void test_draw_line_dda(std::vector<sf::Uint8>& frame_buffer);
 void draw_axis(std::vector<sf::Uint8>& frame_buffer);
 void draw_line_1(std::vector<sf::Uint8>& frame_buffer);
 void draw_line_2(std::vector<sf::Uint8>& frame_buffer);
+void draw_line_3(std::vector<sf::Uint8>& frame_buffer);
 void draw_line_4(std::vector<sf::Uint8>& frame_buffer);
+void draw_line_5(std::vector<sf::Uint8>& frame_buffer);
+void draw_line_6(std::vector<sf::Uint8>& frame_buffer);
 
 int main() {
     sf::RenderWindow window(sf::VideoMode(w, h), "Line Drawing DDA");
@@ -67,7 +70,7 @@ void fill_frame_buffer(std::vector<sf::Uint8>& frame_buffer, sf::Color color) {
 void draw_line_dda(std::vector<sf::Uint8>& frame_buffer, int x0, int y0, int x1, int y1, sf::Color color) {
     // Vertical.
     if (x0 == x1) {
-        // Top down.
+        // Make ascending.
         if (y0 > y1) {
             std::swap(y0, y1);
             std::swap(x0, x1);
@@ -89,6 +92,14 @@ void draw_line_dda(std::vector<sf::Uint8>& frame_buffer, int x0, int y0, int x1,
 
     // Non-steep.
     if (std::abs(dy) <= std::abs(dx)) {
+        // Make ascending.
+        if (x0 > x1) {
+            std::swap(x0, x1);
+            std::swap(y0, y1);
+            dx = -dx;
+            dy = -dy;
+        }
+
         const float slope = static_cast<float>(dy) / dx;
 
         float y_accum = y0;
@@ -97,14 +108,35 @@ void draw_line_dda(std::vector<sf::Uint8>& frame_buffer, int x0, int y0, int x1,
             y_accum += slope;
         }
     }
+    // Steep.
+    else {
+        // Make ascending.
+        if (y0 > y1) {
+            std::swap(y0, y1);
+            std::swap(x0, x1);
+            dy = -dy;
+            dx = -dx;
+        }
+
+        const float inv_slope = static_cast<float>(dx) / dy;
+
+        float x_accum = x0;
+        for (int y = y0; y <= y1; y++) {
+            set_pixel_color(frame_buffer, std::round(x_accum), y, color);
+            x_accum += inv_slope;
+        }
+    }
 }
 
 void test_draw_line_dda(std::vector<sf::Uint8>& frame_buffer) {
     draw_axis(frame_buffer);
 
     //draw_line_1(frame_buffer);
-    draw_line_2(frame_buffer);
-    //draw_line_4(frame_buffer); // Должен свопнуть точки.
+    //draw_line_2(frame_buffer);
+    //draw_line_3(frame_buffer);  // Должен свопнуть точки.
+    //draw_line_4(frame_buffer);  // Должен свопнуть точки.
+    //draw_line_5(frame_buffer);  // Должен свопнуть точки.
+    draw_line_6(frame_buffer);  // Должен свопнуть точки.
 }
 
 void draw_axis(std::vector<sf::Uint8>& frame_buffer) {
@@ -117,14 +149,26 @@ void draw_axis(std::vector<sf::Uint8>& frame_buffer) {
     }
 }
 
-void draw_line_4(std::vector<sf::Uint8>& frame_buffer) {
-    draw_line_dda(frame_buffer, 401, 297, 401, 291, sf::Color::Black);
-}
-
 void draw_line_1(std::vector<sf::Uint8>& frame_buffer) {
     draw_line_dda(frame_buffer, 402, 299, 404, 299, sf::Color::Black);
 }
 
 void draw_line_2(std::vector<sf::Uint8>& frame_buffer) {
     draw_line_dda(frame_buffer, 402, 298, 404, 297, sf::Color::Black);
+}
+
+void draw_line_3(std::vector<sf::Uint8>& frame_buffer) {
+    draw_line_dda(frame_buffer, 401, 297, 409, 282, sf::Color::Black);
+}
+
+void draw_line_4(std::vector<sf::Uint8>& frame_buffer) {
+    draw_line_dda(frame_buffer, 401, 297, 401, 291, sf::Color::Black);
+}
+
+void draw_line_5(std::vector<sf::Uint8>& frame_buffer) {
+    draw_line_dda(frame_buffer, 399, 297, 394, 285, sf::Color::Black);
+}
+
+void draw_line_6(std::vector<sf::Uint8>& frame_buffer) {
+    draw_line_dda(frame_buffer, 395, 294, 385, 284, sf::Color::Black);
 }
