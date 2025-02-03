@@ -11,14 +11,9 @@ void set_pixel_color(std::vector<sf::Uint8>& frame_buffer, int x, int y, sf::Col
 void fill_frame_buffer(std::vector<sf::Uint8>& frame_buffer, sf::Color color);
 void draw_line_dda(std::vector<sf::Uint8>& frame_buffer, int x0, int y0, int x1, int y1, sf::Color color);
 
-void clip_line_coh_suth(float& x0, float& y0, float& x1, float& y1);
+bool clip_line_coh_suth(float& x0, float& y0, float& x1, float& y1);
 
 void test_clipping(std::vector<sf::Uint8>& frame_buffer);
-
-struct Line {
-    float x0, y0;
-    float x1, y1;
-};
 
 int main() {
     sf::RenderWindow window(sf::VideoMode(w, h), "Cohen-Sutherland 2D Line Clipping");
@@ -135,59 +130,113 @@ void draw_line_dda(std::vector<sf::Uint8>& frame_buffer, int x0, int y0, int x1,
     }
 }
 
-void clip_line_coh_suth(float& x0, float& y0, float& x1, float& y1) {
-    enum RegionBit {
-        LEFT = 3,
-        RIGHT = 2,
-        TOP = 1,
-        BOTTOM = 0
+bool clip_line_coh_suth(float& x0, float& y0, float& x1, float& y1) {
+    enum EdgeBit {
+        left = 3,
+        right = 2,
+        top = 1,
+        bottom = 0
     };
 
-    std::bitset<4> region_code_0;
-    std::bitset<4> region_code_1;
+    struct Point {
+        float& x;
+        float& y;
+        std::bitset<4> region_code;
+    };
 
-    region_code_0.set(RegionBit::LEFT, x0 < 0);
-    region_code_0.set(RegionBit::RIGHT, x0 >= w);
-    region_code_0.set(RegionBit::TOP, y0 < 0);
-    region_code_0.set(RegionBit::BOTTOM, y0 >= h);
+    Point p1{ x1, y1 };
+    p1.region_code.set(EdgeBit::left, p1.x < 0);
+    p1.region_code.set(EdgeBit::right, p1.x >= w);
+    p1.region_code.set(EdgeBit::top, p1.y < 0);
+    p1.region_code.set(EdgeBit::bottom, p1.y >= h);
 
-    region_code_1.set(RegionBit::LEFT, x1 < 0);
-    region_code_1.set(RegionBit::RIGHT, x1 >= w);
-    region_code_1.set(RegionBit::TOP, y1 < 0);
-    region_code_1.set(RegionBit::BOTTOM, y1 >= h);
+    Point p0{ x0, y0 };
+    do {
+        p0.region_code.set(EdgeBit::left, p0.x < 0);
+        p0.region_code.set(EdgeBit::right, p0.x >= w);
+        p0.region_code.set(EdgeBit::top, p0.y < 0);
+        p0.region_code.set(EdgeBit::bottom, p0.y >= h);
 
-    std::cout << region_code_0 << std::endl;
-    std::cout << region_code_1 << std::endl;
+        bool line_inside = (p0.region_code | p1.region_code).none();
+        if (line_inside)
+            return true;
+
+        bool line_outside = (p0.region_code & p1.region_code).any();
+        if (line_outside)
+            return false;
+
+        // Make sure the first point is the one that is outside.
+        if (p0.region_code.none()) {
+            std::swap(p0.x, p1.x);
+            std::swap(p0.y, p1.y);
+            std::swap(p0.region_code, p1.region_code);
+        }
+
+        // Find the first edge outside of which the point is.
+        EdgeBit first_edge;
+        for (int i = EdgeBit::left; i >= EdgeBit::bottom; i--) {
+            if (p0.region_code[i]) {
+                first_edge = static_cast<EdgeBit>(i);
+                break;
+            }
+        }
+
+        if (first_edge == EdgeBit::left || first_edge == EdgeBit::right) {
+            float edge_x = first_edge == EdgeBit::left ? 0 : w - 1;
+            float slope = (p1.y - p0.y) / (p1.x - p0.x);
+
+            float x_excess = edge_x - p0.x;
+            p0.x = edge_x;
+            p0.y += x_excess * slope;
+        }
+        else {
+            float edge_y = first_edge == EdgeBit::top ? 0 : h - 1;
+            float slope = (p1.x - p0.x) / (p1.y - p0.y);
+
+            float y_excess = edge_y - p0.y;
+            p0.y = edge_y;
+            p0.x += y_excess * slope;
+        }
+    } while (true);
 }
 
 void test_clipping(std::vector<sf::Uint8>& frame_buffer) {
+    struct Line {
+        float x0;
+        float y0;
+
+        float x1;
+        float y1;
+    };
+
     std::array<Line, 18> test_line_array{ {
-            //{700.0f, 10.0f, 600.0f, 20.0f}, // Trivially accepted.
+            {700.0f, 10.0f, 600.0f, 20.0f}, // Trivially accepted.
             {-100.0f, -200.0f, 100.0f, -200.0f}, // Trivially rejected.
-            //{-200.0f, -100.0f, -200.0f, 700.0f}, // Trivially rejected.
-            //{-100.0f, 800.0f, 900.0f, 800.0f}, // Trivially rejected.
-            //{1000.0f, -100.0f, 1000.0f, 100.0f}, // Trivially rejected.
-            //{-50.0f, 100.0f, 50.0f, 100.0f},
-            //{200.0f, 50.0f, 200.0f, -50.0f},
-            //{850.0f, 100.0f, 750.0f, 100.0f},
-            //{200.0f, 550.0f, 200.0f, 650.0f},
-            //{-50.0f, 150.0f, 850.0f, 150.0f},
-            //{250.0f, -50.0f, 250.0f, 650.0f},
-            //{-150.0f, 50.0f, 50.0f, -150.0f},
-            //{-25.0f, 75.0f, 75.0f, -25.0f},
-            //{724.0f, -25.0f, 824.0f, 75.0f},
-            //{724.0f, 624.0f, 824.0f, 524.0f},
-            //{-25.0f, 524.0f, 75.0f, 624.0f},
-            //{-100.0f, -150.0f, 899.0f, 749.0f}, // The worst case 1.
-            //{-100.0f, 749.0f, 899.0f, -150.0f} // The worst case 2.
+            {-200.0f, -100.0f, -200.0f, 700.0f}, // Trivially rejected.
+            {-100.0f, 800.0f, 900.0f, 800.0f}, // Trivially rejected.
+            {1000.0f, -100.0f, 1000.0f, 100.0f}, // Trivially rejected.
+            {-50.0f, 100.0f, 50.0f, 100.0f},
+            {200.0f, 50.0f, 200.0f, -50.0f},
+            {850.0f, 100.0f, 750.0f, 100.0f},
+            {200.0f, 550.0f, 200.0f, 650.0f},
+            {-50.0f, 150.0f, 850.0f, 150.0f},
+            {250.0f, -50.0f, 250.0f, 650.0f},
+            {-150.0f, 50.0f, 50.0f, -150.0f},
+            {-25.0f, 75.0f, 75.0f, -25.0f},
+            {724.0f, -25.0f, 824.0f, 75.0f},
+            {724.0f, 624.0f, 824.0f, 524.0f},
+            {-25.0f, 524.0f, 75.0f, 624.0f},
+            {-100.0f, -150.0f, 899.0f, 749.0f}, // The worst case 1.
+            {-100.0f, 749.0f, 899.0f, -150.0f} // The worst case 2.
         } };
 
     for (Line& line : test_line_array) {
-        clip_line_coh_suth(line.x0, line.y0, line.x1, line.y1);
-        draw_line_dda(
-            frame_buffer,
-            std::round(line.x0), std::round(line.y0),
-            std::round(line.x1), std::round(line.y1),
-            sf::Color::Black);
+        if (clip_line_coh_suth(line.x0, line.y0, line.x1, line.y1)) {
+            draw_line_dda(
+                frame_buffer,
+                std::round(line.x0), std::round(line.y0),
+                std::round(line.x1), std::round(line.y1),
+                sf::Color::Black);
+        }
     }
 }
