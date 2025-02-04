@@ -146,16 +146,16 @@ bool clip_line_coh_suth(float& x0, float& y0, float& x1, float& y1) {
 
     Point p1{ x1, y1 };
     p1.region_code.set(EdgeBit::left, p1.x < 0);
-    p1.region_code.set(EdgeBit::right, p1.x >= w);
+    p1.region_code.set(EdgeBit::right, p1.x > w - 1);
     p1.region_code.set(EdgeBit::top, p1.y < 0);
-    p1.region_code.set(EdgeBit::bottom, p1.y >= h);
+    p1.region_code.set(EdgeBit::bottom, p1.y > h - 1);
 
     Point p0{ x0, y0 };
     do {
         p0.region_code.set(EdgeBit::left, p0.x < 0);
-        p0.region_code.set(EdgeBit::right, p0.x >= w);
+        p0.region_code.set(EdgeBit::right, p0.x > w - 1);
         p0.region_code.set(EdgeBit::top, p0.y < 0);
-        p0.region_code.set(EdgeBit::bottom, p0.y >= h);
+        p0.region_code.set(EdgeBit::bottom, p0.y > h - 1);
 
         bool line_inside = (p0.region_code | p1.region_code).none();
         if (line_inside)
