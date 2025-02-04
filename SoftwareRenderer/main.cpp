@@ -6,6 +6,7 @@
 #include <array>
 #include <limits>
 #include <numbers>
+#include <bitset>
 
 #include <SFML/Graphics.hpp>
 
@@ -40,7 +41,12 @@ void draw_mesh(const aiMesh* mesh, sf::VertexArray& frame_buffer, float angle_de
 bool is_backfaced(const Polygon& polygon_in_cam_space);
 void draw_line_color(Vec2i a, Vec2i b, sf::VertexArray& frame_buffer, const sf::Color& color);
 
-void draw_mesh_(const aiMesh* mesh, sf::VertexArray& frame_buffer, const Vec3f& rotation, const Vec3f& translation);
+void draw_mesh_(const aiMesh* mesh, std::vector<sf::Uint8>& frame_buffer, const Vec3f& rotation, const Vec3f& translation);
+void draw_triangle_(std::vector<sf::Uint8>& frame_buffer, Vertex a, Vertex b, Vertex c);
+void draw_line_dda(std::vector<sf::Uint8>& frame_buffer, int x0, int y0, int x1, int y1, sf::Color color);
+bool clip_line_coh_suth(float& x0, float& y0, float& x1, float& y1);
+void set_pixel_color(std::vector<sf::Uint8>& frame_buffer, int x, int y, sf::Color color);
+void fill_frame_buffer(std::vector<sf::Uint8>& frame_buffer, sf::Color color);
 
 //std::random_device random_device;
 //std::mt19937 engine(random_device());
@@ -77,33 +83,21 @@ Camera cam{
 //};
 
 int main() {
-    depth_buffer.fill(-std::numeric_limits<float>::max());
-
     sf::RenderWindow window(sf::VideoMode(w, h), "Software Renderer");
-    p_win = &window;
-    sf::VertexArray frame_buffer(sf::Points, w * h);
-    for (int i = 0; i < w * h; i++) {
-        frame_buffer[i].color = sf::Color::White;
-    }
+
+    std::vector<sf::Uint8> frame_buffer(w * h * 4);
+    fill_frame_buffer(frame_buffer, sf::Color::White);
 
     sf::Texture texture;
-    if (!texture.loadFromFile("data/box_textured/textures/uv_map.jpg")) {
-        //if (!texture.loadFromFile("data/cut_fish/textures/lambert2SG_baseColor.png")) {
-        //if (!texture.loadFromFile("data/soccer_ball/textures/Material.004_baseColor.png")) {
-        //if (!texture.loadFromFile("data/fuel_barrel/textures/FuelBarrel_baseColor.png")) {
-        //if (!texture.loadFromFile("data/low_poly_sphere/textures/earth.jpeg")) {
-        std::cerr << "Failed to load texture" << std::endl;
-        return -1;
+    if (!texture.create(w, h)) {
+        std::cout << "SFML: Create texture fail.\n";
     }
-    sf::Image image = texture.copyToImage();
-    p_image = &image;
+
+    sf::Sprite sprite(texture);
 
     Assimp::Importer importer;
     const aiScene* scene = importer.ReadFile("data/box_textured/scene.gltf",
         //const aiScene* scene = importer.ReadFile("data/cut_fish/scene.gltf",
-        //const aiScene* scene = importer.ReadFile("data/soccer_ball/scene.gltf",
-        //const aiScene* scene = importer.ReadFile("data/fuel_barrel/scene.gltf",
-        //const aiScene* scene = importer.ReadFile("data/low_poly_sphere/scene.gltf",
         aiProcess_CalcTangentSpace
         | aiProcess_Triangulate
         | aiProcess_JoinIdenticalVertices
@@ -117,15 +111,6 @@ int main() {
     }
     const aiMesh* mesh = scene->mMeshes[0];
 
-    //
-    depth_buffer.fill(-std::numeric_limits<float>::max());
-    for (int i = 0; i < w * h; i++) {
-        frame_buffer[i].color = sf::Color::White;
-    }
-    //draw_rotate(mesh, frame_buffer, 0.0f);
-    //draw_mesh(mesh, frame_buffer, 0.0f);
-    //
-
     float angle = 0.0f;
     while (window.isOpen()) {
         sf::Event event;
@@ -134,15 +119,9 @@ int main() {
                 window.close();
         }
 
-        window.clear(sf::Color::White);
+        fill_frame_buffer(frame_buffer, sf::Color::White);
 
-        depth_buffer.fill(-std::numeric_limits<float>::max());
-        for (int i = 0; i < w * h; i++) {
-            frame_buffer[i].color = sf::Color::White;
-        }
-
-        //draw_rotate(mesh, frame_buffer, angle += 1.5f);
-        angle += 1.0f;
+        angle += 0.01f;
         //draw_mesh_(mesh, frame_buffer, Vec3f::zero, Vec3f::zero);
 
         //draw_mesh_(mesh, frame_buffer, Vec3f(0.0f, 0.0f, 0.0f), Vec3f(-6.0f, 0.0f, 0.0f));
@@ -151,9 +130,14 @@ int main() {
         //draw_mesh_(mesh, frame_buffer, Vec3f(0.0f, 0.5f, 0.0f), Vec3f(5.0f, 0.0f, -5.5f));
         //draw_mesh_(mesh, frame_buffer, Vec3f(0.0f, 0.0f, 0.0f), Vec3f(0.0f, 3.0f, -5.5f));
         //draw_mesh_(mesh, frame_buffer, Vec3f(0.0f, 0.0f, 0.0f), Vec3f(0.0f, -3.0f, -5.5f));
-        draw_mesh_(mesh, frame_buffer, Vec3f(10.0f, 15.0f, 13.0f), Vec3f(0.0f, 0.0f, -5.5f));
+        //draw_mesh_(mesh, frame_buffer, Vec3f(0.0f, 0.0f, 0.0f), Vec3f(std::sin(angle) * 4.5f, std::sin(angle) * 4.0f, -6.0f));
+        //draw_mesh_(mesh, frame_buffer, Vec3f(0.0f, 0.0f, 0.0f), Vec3f(std::cos(angle) * 4.0f, std::sin(angle) * 4.0f, std::cos(angle) * 5.0f));
+        draw_mesh_(mesh, frame_buffer, Vec3f(25.0f, 10.0f, 0.0f), Vec3f(std::cos(angle) * 5.0f, std::sin(angle) * 5.0f, std::cos(angle) * 2.0 - 7.0f));
 
-        window.draw(frame_buffer);
+        texture.update(frame_buffer.data());
+
+        window.clear();
+        window.draw(sprite);
         window.display();
     }
 
@@ -229,7 +213,7 @@ bool draw_rotate(const aiMesh* mesh, sf::VertexArray& frame_buffer, float angle_
     return true;
 }
 
-void draw_mesh_(const aiMesh* mesh, sf::VertexArray& frame_buffer, const Vec3f& rotation, const Vec3f& translation) {
+void draw_mesh_(const aiMesh* mesh, std::vector<sf::Uint8>& frame_buffer, const Vec3f& rotation, const Vec3f& translation) {
     //Mat4f persp_proj_mat = Mat4f::create_perspective(45.0 * (std::numbers::pi / 180.0), w / (float)h, -2.0f, -8.0f);
     Mat4f persp_proj_mat = Mat4f::create_perspective(45.0 * (std::numbers::pi / 180.0), w / (float)h, -2.0f, -10.0f);
     Mat4f viewport_mat = Mat4f::create_viewport(w, h);
@@ -240,7 +224,7 @@ void draw_mesh_(const aiMesh* mesh, sf::VertexArray& frame_buffer, const Vec3f& 
     Mat4f rotation_z_mat = Mat4f::create_rotation_z(rotation.z * (std::numbers::pi / 180.0));
 
     const float far_clipping_plane_z = -10.0f;
-    const float near_clipping_plane_z = -2.0f;
+    const float near_clipping_plane_z = -8.0f;
 
     std::vector<Polygon> polygons;
     polygons.reserve(mesh->mNumFaces);
@@ -272,10 +256,10 @@ void draw_mesh_(const aiMesh* mesh, sf::VertexArray& frame_buffer, const Vec3f& 
         }
 
         // Backface culling in camera space.
-        if (is_backfaced(polygon))
-            continue;
+        /*if (is_backfaced(polygon))
+            continue;*/
 
-        // Far plane culling.
+            // Far plane culling.
         if (polygon.vertices[0].pos.z <= far_clipping_plane_z &&
             polygon.vertices[1].pos.z <= far_clipping_plane_z &&
             polygon.vertices[2].pos.z <= far_clipping_plane_z)
@@ -473,7 +457,8 @@ void draw_mesh_(const aiMesh* mesh, sf::VertexArray& frame_buffer, const Vec3f& 
         Vertex v0{ polygon.vertices[0].pos, polygon.vertices[0].u, polygon.vertices[0].v };
         Vertex v1{ polygon.vertices[1].pos, polygon.vertices[1].u, polygon.vertices[1].v };
         Vertex v2{ polygon.vertices[2].pos, polygon.vertices[2].u, polygon.vertices[2].v };
-        draw_triangle(v0, v1, v2, frame_buffer, 1.0f, false);
+
+        draw_triangle_(frame_buffer, v0, v1, v2);
     }
 }
 
@@ -993,5 +978,176 @@ void draw_triangle(Vertex a, Vertex b, Vertex c, sf::VertexArray& frame_buffer, 
         Vec2i p2(x_2, i + a.pos.y);
 
         draw_line(p1, p2, frame_buffer, intensity, a, b, c);
+    }
+}
+
+void draw_triangle_(std::vector<sf::Uint8>& frame_buffer, Vertex a, Vertex b, Vertex c) {
+    Vertex a_copy = a;
+    Vertex b_copy = b;
+    Vertex c_copy = c;
+
+    if (clip_line_coh_suth(a_copy.pos.x, a_copy.pos.y, b_copy.pos.x, b_copy.pos.y))
+        draw_line_dda(frame_buffer, std::round(a_copy.pos.x), std::round(a_copy.pos.y), std::round(b_copy.pos.x), std::round(b_copy.pos.y), sf::Color::Black);
+
+    b_copy = b;
+    if (clip_line_coh_suth(b_copy.pos.x, b_copy.pos.y, c_copy.pos.x, c_copy.pos.y))
+        draw_line_dda(frame_buffer, std::round(b_copy.pos.x), std::round(b_copy.pos.y), std::round(c_copy.pos.x), std::round(c_copy.pos.y), sf::Color::Black);
+
+    c_copy = c;
+    a_copy = a;
+    if (clip_line_coh_suth(c_copy.pos.x, c_copy.pos.y, a_copy.pos.x, a_copy.pos.y))
+        draw_line_dda(frame_buffer, std::round(c_copy.pos.x), std::round(c_copy.pos.y), std::round(a_copy.pos.x), std::round(a_copy.pos.y), sf::Color::Black);
+}
+
+void draw_line_dda(std::vector<sf::Uint8>& frame_buffer, int x0, int y0, int x1, int y1, sf::Color color) {
+    // Vertical.
+    if (x0 == x1) {
+        // Make ascending.
+        if (y0 > y1) {
+            std::swap(y0, y1);
+            std::swap(x0, x1);
+        }
+
+        for (int y = y0; y <= y1; y++) {
+            set_pixel_color(frame_buffer, x0, y, color);
+        }
+    }
+    // Horizontal.
+    else if (y0 == y1) {
+        // Make ascending.
+        if (x0 > x1) {
+            std::swap(x0, x1);
+        }
+
+        for (int x = x0; x <= x1; x++) {
+            set_pixel_color(frame_buffer, x, y0, color);
+        }
+    }
+
+    int dy = y1 - y0;
+    int dx = x1 - x0;
+
+    // Non-steep.
+    if (std::abs(dy) <= std::abs(dx)) {
+        // Make ascending.
+        if (x0 > x1) {
+            std::swap(x0, x1);
+            std::swap(y0, y1);
+            dx = -dx;
+            dy = -dy;
+        }
+
+        const float slope = static_cast<float>(dy) / dx;
+
+        float y_accum = y0;
+        for (int x = x0; x <= x1; x++) {
+            set_pixel_color(frame_buffer, x, std::round(y_accum), color);
+            y_accum += slope;
+        }
+    }
+    // Steep.
+    else {
+        // Make ascending.
+        if (y0 > y1) {
+            std::swap(y0, y1);
+            std::swap(x0, x1);
+            dy = -dy;
+            dx = -dx;
+        }
+
+        const float inv_slope = static_cast<float>(dx) / dy;
+
+        float x_accum = x0;
+        for (int y = y0; y <= y1; y++) {
+            set_pixel_color(frame_buffer, std::round(x_accum), y, color);
+            x_accum += inv_slope;
+        }
+    }
+}
+
+bool clip_line_coh_suth(float& x0, float& y0, float& x1, float& y1) {
+    enum EdgeBit {
+        left = 3,
+        right = 2,
+        top = 1,
+        bottom = 0
+    };
+
+    struct Point {
+        float& x;
+        float& y;
+        std::bitset<4> region_code;
+    };
+
+    Point p1{ x1, y1 };
+    p1.region_code.set(EdgeBit::left, p1.x < 0);
+    p1.region_code.set(EdgeBit::right, p1.x > w - 1);
+    p1.region_code.set(EdgeBit::top, p1.y < 0);
+    p1.region_code.set(EdgeBit::bottom, p1.y > h - 1);
+
+    Point p0{ x0, y0 };
+    do {
+        p0.region_code.set(EdgeBit::left, p0.x < 0);
+        p0.region_code.set(EdgeBit::right, p0.x > w - 1);
+        p0.region_code.set(EdgeBit::top, p0.y < 0);
+        p0.region_code.set(EdgeBit::bottom, p0.y > h - 1);
+
+        bool line_inside = (p0.region_code | p1.region_code).none();
+        if (line_inside)
+            return true;
+
+        bool line_outside = (p0.region_code & p1.region_code).any();
+        if (line_outside)
+            return false;
+
+        // Make sure the first point is the one that is outside.
+        if (p0.region_code.none()) {
+            std::swap(p0.x, p1.x);
+            std::swap(p0.y, p1.y);
+            std::swap(p0.region_code, p1.region_code);
+        }
+
+        // Find the first edge outside of which the point is.
+        EdgeBit first_edge;
+        for (int i = EdgeBit::left; i >= EdgeBit::bottom; i--) {
+            if (p0.region_code[i]) {
+                first_edge = static_cast<EdgeBit>(i);
+                break;
+            }
+        }
+
+        if (first_edge == EdgeBit::left || first_edge == EdgeBit::right) {
+            float edge_x = first_edge == EdgeBit::left ? 0 : w - 1;
+            float slope = (p1.y - p0.y) / (p1.x - p0.x);
+
+            float x_excess = edge_x - p0.x;
+            p0.x = edge_x;
+            p0.y += x_excess * slope;
+        }
+        else {
+            float edge_y = first_edge == EdgeBit::top ? 0 : h - 1;
+            float slope = (p1.x - p0.x) / (p1.y - p0.y);
+
+            float y_excess = edge_y - p0.y;
+            p0.y = edge_y;
+            p0.x += y_excess * slope;
+        }
+    } while (true);
+}
+
+void set_pixel_color(std::vector<sf::Uint8>& frame_buffer, int x, int y, sf::Color color) {
+    const int index = (y * w + x) * 4;
+
+    frame_buffer[index] = color.r;
+    frame_buffer[index + 1] = color.g;
+    frame_buffer[index + 2] = color.b;
+    frame_buffer[index + 3] = color.a;
+}
+
+void fill_frame_buffer(std::vector<sf::Uint8>& frame_buffer, sf::Color color) {
+    for (int i = 0; i < w * h; i++) {
+        const int x = i % w;
+        const int y = i / w;
+        set_pixel_color(frame_buffer, x, y, color);
     }
 }

@@ -42,11 +42,11 @@ Mat4f Mat4f::create_perspective(float fov_vert_rad, float aspect_ratio, float ne
 Mat4f Mat4f::create_viewport(int w, int h) {
     Mat4f mat_view{};
 
-    mat_view.data.at(0) = w / 2;
-    mat_view.data.at(5) = h / 2;
+    mat_view.data.at(0) = (w - 1) / 2;
+    mat_view.data.at(5) = -(h - 1) / 2;
     mat_view.data.at(11) = -1.0f;
-    mat_view.data.at(12) = w / 2;
-    mat_view.data.at(13) = h / 2;
+    mat_view.data.at(12) = (w - 1) / 2;
+    mat_view.data.at(13) = (h - 1) / 2;
 
     return mat_view;
 }
