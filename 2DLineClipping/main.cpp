@@ -185,11 +185,11 @@ bool clip_line_coh_suth(float& x0, float& y0, float& x1, float& y1) {
         }
         else {
             float edge_y = first_edge == EdgeBit::top ? 0 : h - 1;
-            float slope = (p1.x - p0.x) / (p1.y - p0.y);
+            float inv_slope = (p1.x - p0.x) / (p1.y - p0.y);
 
             float y_excess = edge_y - p0.y;
             p0.y = edge_y;
-            p0.x += y_excess * slope;
+            p0.x += y_excess * inv_slope;
         }
 
         p0.region_code.set(EdgeBit::left, p0.x < 0);
