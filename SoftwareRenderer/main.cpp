@@ -96,8 +96,10 @@ int main() {
     sf::Sprite sprite(texture);
 
     Assimp::Importer importer;
-    const aiScene* scene = importer.ReadFile("data/box_textured/scene.gltf",
-        //const aiScene* scene = importer.ReadFile("data/cut_fish/scene.gltf",
+    //const aiScene* scene = importer.ReadFile("data/box_textured/scene.gltf",
+    //const aiScene* scene = importer.ReadFile("data/fuel_barrel/scene.gltf",
+    //const aiScene* scene = importer.ReadFile("data/fuel_barrel/scene.gltf",
+    const aiScene* scene = importer.ReadFile("data/pony_cartoon/scene.gltf",
         aiProcess_CalcTangentSpace
         | aiProcess_Triangulate
         | aiProcess_JoinIdenticalVertices
@@ -130,9 +132,9 @@ int main() {
         //draw_mesh_(mesh, frame_buffer, Vec3f(0.0f, 0.5f, 0.0f), Vec3f(5.0f, 0.0f, -5.5f));
         //draw_mesh_(mesh, frame_buffer, Vec3f(0.0f, 0.0f, 0.0f), Vec3f(0.0f, 3.0f, -5.5f));
         //draw_mesh_(mesh, frame_buffer, Vec3f(0.0f, 0.0f, 0.0f), Vec3f(0.0f, -3.0f, -5.5f));
-        //draw_mesh_(mesh, frame_buffer, Vec3f(0.0f, 0.0f, 0.0f), Vec3f(std::sin(angle) * 4.5f, std::sin(angle) * 4.0f, -6.0f));
-        //draw_mesh_(mesh, frame_buffer, Vec3f(0.0f, 0.0f, 0.0f), Vec3f(std::cos(angle) * 4.0f, std::sin(angle) * 4.0f, std::cos(angle) * 5.0f));
-        draw_mesh_(mesh, frame_buffer, Vec3f(25.0f, 10.0f, 0.0f), Vec3f(std::cos(angle) * 5.0f, std::sin(angle) * 5.0f, std::cos(angle) * 2.0 - 7.0f));
+        //draw_mesh_(mesh, frame_buffer, Vec3f(0.0f, angle * 30.0f, 0.0f), Vec3f(0.0f, std::sin(angle) * 4.5f, -6.0f));
+        draw_mesh_(mesh, frame_buffer, Vec3f(angle * 30.0f, 0.0f, 0.0f), Vec3f(std::sin(angle) * 5.0f, -2.5f, -6.0f));
+        //draw_mesh_(mesh, frame_buffer, Vec3f(25.0f, 10.0f, 0.0f), Vec3f(std::cos(angle) * 5.0f, std::sin(angle) * 5.0f, std::cos(angle) * 2.0 - 7.0f));
 
         texture.update(frame_buffer.data());
 
@@ -219,7 +221,7 @@ void draw_mesh_(const aiMesh* mesh, std::vector<sf::Uint8>& frame_buffer, const 
     Mat4f viewport_mat = Mat4f::create_viewport(w, h);
 
     Mat4f translation_mat = Mat4f::create_translation(translation);
-    Mat4f rotation_x_mat = Mat4f::create_rotation_y(rotation.x * (std::numbers::pi / 180.0));
+    Mat4f rotation_x_mat = Mat4f::create_rotation_x(rotation.x * (std::numbers::pi / 180.0));
     Mat4f rotation_y_mat = Mat4f::create_rotation_y(rotation.y * (std::numbers::pi / 180.0));
     Mat4f rotation_z_mat = Mat4f::create_rotation_z(rotation.z * (std::numbers::pi / 180.0));
 
@@ -1086,20 +1088,14 @@ bool clip_line_coh_suth(float& x0, float& y0, float& x1, float& y1) {
     p1.region_code.set(EdgeBit::bottom, p1.y > h - 1);
 
     Point p0{ x0, y0 };
-    do {
-        p0.region_code.set(EdgeBit::left, p0.x < 0);
-        p0.region_code.set(EdgeBit::right, p0.x > w - 1);
-        p0.region_code.set(EdgeBit::top, p0.y < 0);
-        p0.region_code.set(EdgeBit::bottom, p0.y > h - 1);
+    p0.region_code.set(EdgeBit::left, p0.x < 0);
+    p0.region_code.set(EdgeBit::right, p0.x > w - 1);
+    p0.region_code.set(EdgeBit::top, p0.y < 0);
+    p0.region_code.set(EdgeBit::bottom, p0.y > h - 1);
 
-        bool line_inside = (p0.region_code | p1.region_code).none();
-        if (line_inside)
-            return true;
-
-        bool line_outside = (p0.region_code & p1.region_code).any();
-        if (line_outside)
-            return false;
-
+    bool line_inside = (p0.region_code | p1.region_code).none();
+    bool line_outside = (p0.region_code & p1.region_code).any();
+    while (!line_inside && !line_outside) {
         // Make sure the first point is the one that is outside.
         if (p0.region_code.none()) {
             std::swap(p0.x, p1.x);
@@ -1132,7 +1128,17 @@ bool clip_line_coh_suth(float& x0, float& y0, float& x1, float& y1) {
             p0.y = edge_y;
             p0.x += y_excess * slope;
         }
-    } while (true);
+
+        p0.region_code.set(EdgeBit::left, p0.x < 0);
+        p0.region_code.set(EdgeBit::right, p0.x > w - 1);
+        p0.region_code.set(EdgeBit::top, p0.y < 0);
+        p0.region_code.set(EdgeBit::bottom, p0.y > h - 1);
+
+        line_inside = (p0.region_code | p1.region_code).none();
+        line_outside = (p0.region_code & p1.region_code).any();
+    }
+
+    return line_inside ? true : false;
 }
 
 void set_pixel_color(std::vector<sf::Uint8>& frame_buffer, int x, int y, sf::Color color) {
