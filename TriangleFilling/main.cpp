@@ -8,11 +8,14 @@ constexpr unsigned int h = 600;
 void set_pixel_color(std::vector<sf::Uint8>& frame_buffer, int x, int y, sf::Color color);
 void fill_frame_buffer(std::vector<sf::Uint8>& frame_buffer, sf::Color color);
 
+void test_draw_solid_triangle(std::vector<sf::Uint8>& frame_buffer);
+void draw_triangle_1(std::vector<sf::Uint8>& frame_buffer);
+
 int main() {
     sf::RenderWindow window(sf::VideoMode(w, h), "Correct Top-Left Triangle Filling");
 
     std::vector<sf::Uint8> frame_buffer(w * h * 4);
-    fill_frame_buffer(frame_buffer, sf::Color::Magenta);
+    fill_frame_buffer(frame_buffer, sf::Color::White);
 
     sf::Texture texture;
     if (!texture.create(w, h)) {
@@ -27,6 +30,8 @@ int main() {
             if (event.type == sf::Event::Closed)
                 window.close();
         }
+
+        test_draw_solid_triangle(frame_buffer);
 
         texture.update(frame_buffer.data());
 
@@ -53,4 +58,19 @@ void fill_frame_buffer(std::vector<sf::Uint8>& frame_buffer, sf::Color color) {
         const int y = i / w;
         set_pixel_color(frame_buffer, x, y, color);
     }
+}
+
+void test_draw_solid_triangle(std::vector<sf::Uint8>& frame_buffer) {
+    draw_triangle_1(frame_buffer);
+}
+
+void draw_triangle_1(std::vector<sf::Uint8>& frame_buffer) {
+    const int x0 = 348.69399237195f;
+    const int y0 = 100.42784623434f;
+
+    const int x1 = 577.13312257433f;
+    const int y1 = 336.30308604497f;
+
+    const int x2 = 235.16316022857f;
+    const int y2 = 336.30308604497f;
 }
