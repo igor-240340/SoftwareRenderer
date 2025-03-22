@@ -11,6 +11,10 @@ void fill_frame_buffer(std::vector<sf::Uint8>& frame_buffer, sf::Color color);
 void test_draw_solid_triangle(std::vector<sf::Uint8>& frame_buffer);
 void draw_triangle_1(std::vector<sf::Uint8>& frame_buffer);
 
+void draw_filled_triangle(std::vector<sf::Uint8>& frame_buffer, float x0, float y0, float x1, float y1, float x2, float y2);
+void draw_flat_bottom_triangle(std::vector<sf::Uint8>& frame_buffer, float x0, float y0, float x1, float y1, float x2, float y2, sf::Color color);
+void draw_flat_top_triangle(std::vector<sf::Uint8>& frame_buffer, float x0, float y0, float x1, float y1, float x2, float y2, sf::Color color);
+
 int main() {
     sf::RenderWindow window(sf::VideoMode(w, h), "Correct Top-Left Triangle Filling");
 
@@ -65,12 +69,23 @@ void test_draw_solid_triangle(std::vector<sf::Uint8>& frame_buffer) {
 }
 
 void draw_triangle_1(std::vector<sf::Uint8>& frame_buffer) {
-    const int x0 = 348.69399237195f;
-    const int y0 = 100.42784623434f;
+    const float x0 = 348.69399237195f;
+    const float y0 = 100.42784623434f;
 
-    const int x1 = 577.13312257433f;
-    const int y1 = 336.30308604497f;
+    const float x1 = 577.13312257433f;
+    const float y1 = 336.30308604497f;
 
-    const int x2 = 235.16316022857f;
-    const int y2 = 336.30308604497f;
+    const float x2 = 235.16316022857f;
+    const float y2 = 336.30308604497f;
+
+    draw_filled_triangle(frame_buffer, x0, y0, x1, y1, x2, y2);
+}
+
+void draw_filled_triangle(std::vector<sf::Uint8>& frame_buffer, float x0, float y0, float x1, float y1, float x2, float y2) {
+}
+
+void draw_flat_bottom_triangle(std::vector<sf::Uint8>& frame_buffer, float x0, float y0, float x1, float y1, float x2, float y2, sf::Color color) {
+}
+
+void draw_flat_top_triangle(std::vector<sf::Uint8>& frame_buffer, float x0, float y0, float x1, float y1, float x2, float y2, sf::Color color) {
 }
