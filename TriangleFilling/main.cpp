@@ -2,18 +2,22 @@
 
 #include <SFML/Graphics.hpp>
 
+constexpr float epsilon = 1e-06;
+
 constexpr unsigned int w = 800;
 constexpr unsigned int h = 600;
 
 void set_pixel_color(std::vector<sf::Uint8>& frame_buffer, int x, int y, sf::Color color);
 void fill_frame_buffer(std::vector<sf::Uint8>& frame_buffer, sf::Color color);
 
-void test_draw_solid_triangle(std::vector<sf::Uint8>& frame_buffer);
+void test_draw_filled_triangle(std::vector<sf::Uint8>& frame_buffer);
 void draw_triangle_1(std::vector<sf::Uint8>& frame_buffer);
+void draw_triangle_2(std::vector<sf::Uint8>& frame_buffer);
+void draw_triangle_3(std::vector<sf::Uint8>& frame_buffer);
 
 void draw_filled_triangle(std::vector<sf::Uint8>& frame_buffer, float x0, float y0, float x1, float y1, float x2, float y2);
-void draw_flat_bottom_triangle(std::vector<sf::Uint8>& frame_buffer, float x0, float y0, float x1, float y1, float x2, float y2, sf::Color color);
-void draw_flat_top_triangle(std::vector<sf::Uint8>& frame_buffer, float x0, float y0, float x1, float y1, float x2, float y2, sf::Color color);
+void draw_flat_bottom_filled_triangle(std::vector<sf::Uint8>& frame_buffer, float x0, float y0, float x1, float y1, float x2, float y2, sf::Color color);
+void draw_flat_top_filled_triangle(std::vector<sf::Uint8>& frame_buffer, float x0, float y0, float x1, float y1, float x2, float y2, sf::Color color);
 
 int main() {
     sf::RenderWindow window(sf::VideoMode(w, h), "Correct Top-Left Triangle Filling");
@@ -35,7 +39,7 @@ int main() {
                 window.close();
         }
 
-        test_draw_solid_triangle(frame_buffer);
+        test_draw_filled_triangle(frame_buffer);
 
         texture.update(frame_buffer.data());
 
@@ -64,28 +68,123 @@ void fill_frame_buffer(std::vector<sf::Uint8>& frame_buffer, sf::Color color) {
     }
 }
 
-void test_draw_solid_triangle(std::vector<sf::Uint8>& frame_buffer) {
+void test_draw_filled_triangle(std::vector<sf::Uint8>& frame_buffer) {
     draw_triangle_1(frame_buffer);
+    draw_triangle_2(frame_buffer);
+    draw_triangle_3(frame_buffer);
 }
 
 void draw_triangle_1(std::vector<sf::Uint8>& frame_buffer) {
-    const float x0 = 348.69399237195f;
-    const float y0 = 100.42784623434f;
+    const float x0 = 285.64885f;
+    const float y0 = 198.5106210655f;
 
-    const float x1 = 577.13312257433f;
-    const float y1 = 336.30308604497f;
+    const float x1 = 100.34235f;
+    const float y1 = 198.5106210655f;
 
-    const float x2 = 235.16316022857f;
-    const float y2 = 336.30308604497f;
+    const float x2 = 146.66558f;
+    const float y2 = 58.45112f;
+
+    draw_filled_triangle(frame_buffer, x0, y0, x1, y1, x2, y2);
+}
+
+void draw_triangle_2(std::vector<sf::Uint8>& frame_buffer) {
+    const float x0 = 242.9755968939f;
+    const float y0 = 125.8927598072f;
+
+    const float x1 = 353.3272002871f;
+    const float y1 = 125.8927599072f;
+
+    const float x2 = 244.0495784354f;
+    const float y2 = 6.14381792539996f;
+
+    draw_filled_triangle(frame_buffer, x0, y0, x1, y1, x2, y2);
+}
+
+void draw_triangle_3(std::vector<sf::Uint8>& frame_buffer) {
+    const float x0 = 12.75515676349f;
+    const float y0 = 198.5f;
+
+    const float x1 = 135.1306413607f;
+    const float y1 = 56.7063731597f;
+
+    const float x2 = 26.03492759676f;
+    const float y2 = 56.7063726597f;
 
     draw_filled_triangle(frame_buffer, x0, y0, x1, y1, x2, y2);
 }
 
 void draw_filled_triangle(std::vector<sf::Uint8>& frame_buffer, float x0, float y0, float x1, float y1, float x2, float y2) {
+    // Сортируем вершины по Y по возврастанию.
+    if (y0 > y1) {
+        std::swap(y0, y1);
+        std::swap(x0, x1);
+    }
+    if (y1 > y2) {
+        std::swap(y1, y2);
+        std::swap(x1, x2);
+    }
+    if (y0 > y1) {
+        std::swap(y0, y1);
+        std::swap(x0, x1);
+    }
+
+    // Классифицируем треугольник.
+    const bool flat_bottom = std::abs(y1 - y2) < epsilon;
+    const bool flat_top = std::abs(y0 - y1) < epsilon;
+    if (flat_bottom) {
+        draw_flat_bottom_filled_triangle(frame_buffer, x0, y0, x1, y1, x2, y2, sf::Color::Red);
+    }
+    else if (flat_top) {
+        draw_flat_top_filled_triangle(frame_buffer, x0, y0, x1, y1, x2, y2, sf::Color::Red);
+    }
+    // Разделяем треугольник на flat_bottom и flat_top.
+    else {
+        std::cout << "general\n";
+    }
 }
 
-void draw_flat_bottom_triangle(std::vector<sf::Uint8>& frame_buffer, float x0, float y0, float x1, float y1, float x2, float y2, sf::Color color) {
+void draw_flat_bottom_filled_triangle(std::vector<sf::Uint8>& frame_buffer, float x0, float y0, float x1, float y1, float x2, float y2, sf::Color color) {
+    // Сортируем нижние вершины по X по возрастанию.
+    if (x1 > x2) {
+        std::swap(x1, x2);
+        std::swap(y1, y2);
+    }
+
+    const float height = y2 - y0; // Определяем высоту по правой нижней вершине.
+    const float slope_left_inv = (x1 - x0) / height;
+    const float slope_right_inv = (x2 - x0) / height;
+
+    // Начинаем отрисовку с верхней вершины.
+    float scan_line_start = x0;
+    float scan_line_end = x0;
+
+    // Определяем y-координату первой скан-линии (следуем правилу top-left).
+    const int y_start = std::ceil(y0);
+
+    // Корректируем начало и конец первой скан-линии.
+    const float delta_y = y_start - y0;
+    scan_line_start = x0 + delta_y * slope_left_inv;
+    scan_line_end = x0 + delta_y * slope_right_inv;
+
+    // Определяем y-координату последней скан-линии (следуем правилу top-left).
+    const int y_end = std::ceil(y2) - 1;
+
+    for (int y = y_start; y <= y_end; y++) {
+        // Вычисляем целочисленные значения начала и конца текущей скан-линии,
+        // следуя правилу top-left.
+        const int scan_line_start_int = std::ceil(scan_line_start);
+        const int scan_line_end_int = std::ceil(scan_line_end) - 1;
+
+        for (int x = scan_line_start_int; x <= scan_line_end_int; x++) {
+            set_pixel_color(frame_buffer, x, y, color);
+        }
+
+        // Вычисляем начало и конце следующей скан-линии.
+        scan_line_start += slope_left_inv;
+        scan_line_end += slope_right_inv;
+    }
 }
 
-void draw_flat_top_triangle(std::vector<sf::Uint8>& frame_buffer, float x0, float y0, float x1, float y1, float x2, float y2, sf::Color color) {
+void draw_flat_top_filled_triangle(std::vector<sf::Uint8>& frame_buffer, float x0, float y0, float x1, float y1, float x2, float y2, sf::Color color) {
+    std::cout << "\n";
 }
