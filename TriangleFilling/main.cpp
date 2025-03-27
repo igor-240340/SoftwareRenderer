@@ -23,14 +23,18 @@ void draw_triangle_6(std::vector<sf::Uint8>& frame_buffer);
 void draw_triangle_7(std::vector<sf::Uint8>& frame_buffer);
 void draw_triangle_8(std::vector<sf::Uint8>& frame_buffer);
 
+// Оба general, но flat_top верхнего и flat_bottom нижнего не рисуются.
+void draw_triangle_9(std::vector<sf::Uint8>& frame_buffer);
+void draw_triangle_10(std::vector<sf::Uint8>& frame_buffer);
+
 void draw_filled_triangle(std::vector<sf::Uint8>& frame_buffer, float x0, float y0, float x1, float y1, float x2, float y2);
 void draw_flat_bottom_filled_triangle(std::vector<sf::Uint8>& frame_buffer, float x0, float y0, float x1, float y1, float x2, float y2, sf::Color color);
 void draw_flat_top_filled_triangle(std::vector<sf::Uint8>& frame_buffer, float x0, float y0, float x1, float y1, float x2, float y2, sf::Color color);
 
 sf::Color get_random_color() {
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<int> dist(0, 255);
+    static std::random_device rd;
+    static std::mt19937 gen(rd());
+    static std::uniform_int_distribution<int> dist(0, 255);
 
     return sf::Color(dist(gen), dist(gen), dist(gen));
 }
@@ -95,6 +99,9 @@ void test_draw_filled_triangle(std::vector<sf::Uint8>& frame_buffer) {
     draw_triangle_6(frame_buffer);
     draw_triangle_7(frame_buffer);
     draw_triangle_8(frame_buffer);
+    
+    draw_triangle_9(frame_buffer);
+    draw_triangle_10(frame_buffer);
 }
 
 void draw_triangle_1(std::vector<sf::Uint8>& frame_buffer) {
@@ -197,6 +204,32 @@ void draw_triangle_8(std::vector<sf::Uint8>& frame_buffer) {
 
     const float x2 = 409.6016823266f;
     const float y2 = 451.2373621099f;
+
+    draw_filled_triangle(frame_buffer, x0, y0, x1, y1, x2, y2);
+}
+
+void draw_triangle_9(std::vector<sf::Uint8>& frame_buffer) {
+    const float x0 = 671.0229978627f;
+    const float y0 = 18.3377211862f;
+
+    const float x1 = 733.9925299673f;
+    const float y1 = 150.6619830615f;
+
+    const float x2 = 622.5835587075f;
+    const float y2 = 150.9708484096f;
+
+    draw_filled_triangle(frame_buffer, x0, y0, x1, y1, x2, y2);
+}
+
+void draw_triangle_10(std::vector<sf::Uint8>& frame_buffer) {
+    const float x0 = 733.9925299673f;
+    const float y0 = 150.6619830615f;
+
+    const float x1 = 622.5835587075f;
+    const float y1 = 150.9708484096f;
+
+    const float x2 = 644.3167830776f;
+    const float y2 = 233.7367509743f;
 
     draw_filled_triangle(frame_buffer, x0, y0, x1, y1, x2, y2);
 }
