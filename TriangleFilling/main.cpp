@@ -27,6 +27,11 @@ void draw_triangle_8(std::vector<sf::Uint8>& frame_buffer);
 void draw_triangle_9(std::vector<sf::Uint8>& frame_buffer);
 void draw_triangle_10(std::vector<sf::Uint8>& frame_buffer);
 
+// Клиппинг с верхней границей окна.
+void draw_triangle_11(std::vector<sf::Uint8>& frame_buffer); // flat_bottom.
+void draw_triangle_12(std::vector<sf::Uint8>& frame_buffer); // flat_top.
+void draw_triangle_13(std::vector<sf::Uint8>& frame_buffer); // general.
+
 void draw_filled_triangle(std::vector<sf::Uint8>& frame_buffer, float x0, float y0, float x1, float y1, float x2, float y2);
 void draw_flat_bottom_filled_triangle(std::vector<sf::Uint8>& frame_buffer, float x0, float y0, float x1, float y1, float x2, float y2, sf::Color color);
 void draw_flat_top_filled_triangle(std::vector<sf::Uint8>& frame_buffer, float x0, float y0, float x1, float y1, float x2, float y2, sf::Color color);
@@ -43,7 +48,7 @@ int main() {
     sf::RenderWindow window(sf::VideoMode(w, h), "Correct Top-Left Triangle Filling");
 
     std::vector<sf::Uint8> frame_buffer(w * h * 4);
-    fill_frame_buffer(frame_buffer, sf::Color::White);
+    fill_frame_buffer(frame_buffer, sf::Color::Yellow);
 
     sf::Texture texture;
     if (!texture.create(w, h)) {
@@ -89,6 +94,7 @@ void fill_frame_buffer(std::vector<sf::Uint8>& frame_buffer, sf::Color color) {
 }
 
 void test_draw_filled_triangle(std::vector<sf::Uint8>& frame_buffer) {
+    /*
     draw_triangle_1(frame_buffer); // flat_bottom.
     draw_triangle_2(frame_buffer); // flat_bottom.
     draw_triangle_3(frame_buffer); // flat_top.
@@ -99,9 +105,14 @@ void test_draw_filled_triangle(std::vector<sf::Uint8>& frame_buffer) {
     draw_triangle_6(frame_buffer);
     draw_triangle_7(frame_buffer);
     draw_triangle_8(frame_buffer);
-    
+
     draw_triangle_9(frame_buffer);
     draw_triangle_10(frame_buffer);
+    */
+
+    draw_triangle_11(frame_buffer);
+    draw_triangle_12(frame_buffer);
+    draw_triangle_13(frame_buffer);
 }
 
 void draw_triangle_1(std::vector<sf::Uint8>& frame_buffer) {
@@ -234,6 +245,45 @@ void draw_triangle_10(std::vector<sf::Uint8>& frame_buffer) {
     draw_filled_triangle(frame_buffer, x0, y0, x1, y1, x2, y2);
 }
 
+void draw_triangle_11(std::vector<sf::Uint8>& frame_buffer) {
+    const float x0 = 291.1065100094f;
+    const float y0 = -37.3509609094f;
+
+    const float x1 = 283.0f;
+    const float y1 = 57.0f;
+
+    const float x2 = 357.0f;
+    const float y2 = 57.0f;
+
+    draw_filled_triangle(frame_buffer, x0, y0, x1, y1, x2, y2);
+}
+
+void draw_triangle_12(std::vector<sf::Uint8>& frame_buffer) {
+    const float x0 = 325.657620754f;
+    const float y0 = -41.0f;
+
+    const float x1 = 433.9619401172f;
+    const float y1 = -41.0f;
+
+    const float x2 = 388.3303817835f;
+    const float y2 = 56.3531718472f;
+
+    draw_filled_triangle(frame_buffer, x0, y0, x1, y1, x2, y2);
+}
+
+void draw_triangle_13(std::vector<sf::Uint8>& frame_buffer) {
+    const float x0 = 471.9283607778f;
+    const float y0 = -43.5498250651f;
+
+    const float x1 = 431.1210373812f;
+    const float y1 = -3.32132895079997f;
+
+    const float x2 = 476.2695653944f;
+    const float y2 = 55.7190538355f;
+
+    draw_filled_triangle(frame_buffer, x0, y0, x1, y1, x2, y2);
+}
+
 void draw_filled_triangle(std::vector<sf::Uint8>& frame_buffer, float x0, float y0, float x1, float y1, float x2, float y2) {
     // Сортируем вершины по Y по возврастанию.
     if (y0 > y1) {
@@ -287,13 +337,23 @@ void draw_flat_bottom_filled_triangle(std::vector<sf::Uint8>& frame_buffer, floa
     float scan_line_start = x0;
     float scan_line_end = x0;
 
-    // Определяем y-координату первой скан-линии (следуем правилу top-left).
-    const int y_start = std::ceil(y0);
+    // Клиппинг с верхней границей экрана.
+    int y_start = 0;
+    if (y0 < 0.0f) {
+        // Корректируем начало и конец первой скан-линии.
+        const float clip_height = 0.0f - y0;
+        scan_line_start = scan_line_start + clip_height * slope_left_inv;
+        scan_line_end = scan_line_end + clip_height * slope_right_inv;
+    }
+    else {
+        // Определяем y-координату первой скан-линии (следуем правилу top-left).
+        y_start = std::ceil(y0);
 
-    // Корректируем начало и конец первой скан-линии.
-    const float delta_y = y_start - y0;
-    scan_line_start = scan_line_start + delta_y * slope_left_inv;
-    scan_line_end = scan_line_end + delta_y * slope_right_inv;
+        // Корректируем начало и конец первой скан-линии.
+        const float delta_y = y_start - y0;
+        scan_line_start = scan_line_start + delta_y * slope_left_inv;
+        scan_line_end = scan_line_end + delta_y * slope_right_inv;
+    }
 
     // Определяем y-координату последней скан-линии (следуем правилу top-left).
     // NOTE: Если для текущего flat_bottom треугольника существует смежный flat_top,
@@ -335,14 +395,32 @@ void draw_flat_top_filled_triangle(std::vector<sf::Uint8>& frame_buffer, float x
     float scan_line_start = x0;
     float scan_line_end = x1;
 
-    // Первую скан-линию определяем по правой верхней вершине, как описано в замечании
-    // к растеризации flat_bottom треугольника.
-    const int y_start = std::ceil(y1);
+    // Клиппинг с верхней границей экрана.
+    // NOTE: Чтобы быть последовательными, ориентируемся на правую вершину, поскольку по ней определяем
+    // высоту и по ней же определяем y-координату первой скан-линии. Более того, по правой же вершине определяем
+    // для flat_bottom треугольника y-координату последней скан-линии.
+    // 
+    // Но фактически, в случае, когда y-координаты верхних вершин различаются на величину меньше epsilon,
+    // нет разницы, на какую вершину ориентироваться, разница будет лишь в том, какой slope будет вычислен с
+    // большей погрешность: левый или правый, что в свою очередь определяет, какая часть первой скан-линии
+    // будет вычислена с большей погрешностью - левая или правая.
+    int y_start = 0;
+    if (y1 < 0.0f) {
+        // Корректируем начало и конец первой скан-линии.
+        const float clip_height = 0.0f - y1;
+        scan_line_start = scan_line_start + clip_height * slope_left_inv;
+        scan_line_end = scan_line_end + clip_height * slope_right_inv;
+    }
+    else {
+        // Первую скан-линию определяем по правой верхней вершине, как описано в замечании
+        // к растеризации flat_bottom треугольника.
+        const int y_start = std::ceil(y1);
 
-    // Корректируем начало и конец первой скан-линии.
-    const float delta_y = y_start - y1;
-    scan_line_start = scan_line_start + delta_y * slope_left_inv;
-    scan_line_end = scan_line_end + delta_y * slope_right_inv;
+        // Корректируем начало и конец первой скан-линии.
+        const float delta_y = y_start - y1;
+        scan_line_start = scan_line_start + delta_y * slope_left_inv;
+        scan_line_end = scan_line_end + delta_y * slope_right_inv;
+    }
 
     const int y_end = std::ceil(y2) - 1;
 
