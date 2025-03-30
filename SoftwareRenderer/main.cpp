@@ -42,11 +42,17 @@ bool is_backfaced(const Polygon& polygon_in_cam_space);
 void draw_line_color(Vec2i a, Vec2i b, sf::VertexArray& frame_buffer, const sf::Color& color);
 
 void draw_mesh_(const aiMesh* mesh, std::vector<sf::Uint8>& frame_buffer, const Vec3f& rotation, const Vec3f& translation);
-void draw_triangle_(std::vector<sf::Uint8>& frame_buffer, Vertex a, Vertex b, Vertex c);
+void draw_wireframe_triangle_(std::vector<sf::Uint8>& frame_buffer, Vertex a, Vertex b, Vertex c);
 void draw_line_dda(std::vector<sf::Uint8>& frame_buffer, int x0, int y0, int x1, int y1, sf::Color color);
 bool clip_line_coh_suth(float& x0, float& y0, float& x1, float& y1);
 void set_pixel_color(std::vector<sf::Uint8>& frame_buffer, int x, int y, sf::Color color);
 void fill_frame_buffer(std::vector<sf::Uint8>& frame_buffer, sf::Color color);
+
+void draw_filled_triangle_(std::vector<sf::Uint8>& frame_buffer, Vertex a, Vertex b, Vertex c);
+
+void draw_filled_triangle(std::vector<sf::Uint8>& frame_buffer, float x0, float y0, float x1, float y1, float x2, float y2);
+void draw_flat_bottom_filled_triangle(std::vector<sf::Uint8>& frame_buffer, float x0, float y0, float x1, float y1, float x2, float y2, sf::Color color);
+void draw_flat_top_filled_triangle(std::vector<sf::Uint8>& frame_buffer, float x0, float y0, float x1, float y1, float x2, float y2, sf::Color color);
 
 //std::random_device random_device;
 //std::mt19937 engine(random_device());
@@ -59,28 +65,42 @@ std::array<float, w* h> depth_buffer;
 sf::Image* p_image;
 
 Camera cam{
-    Vec3f(0.0f, 0.0f, 2.4142f), // У модели в GeoGebra позиция камеры выбрана не вполне удачно - не в нуле.
+    Vec3f(0.0f, 0.0f, 3.4142f), // У модели в GeoGebra позиция камеры выбрана не вполне удачно - не в нуле.
     (90.0 + 0.0) * (std::numbers::pi / 180.0),
     (90.0 + 0.0) * (std::numbers::pi / 180.0)
 };
 
-//Camera cam{
-//    Vec3f(1.0f, 2.0f, 2.0f),
-//    (90.0 + 10.0) * (std::numbers::pi / 180.0),
-//    (90.0 + 45.0) * (std::numbers::pi / 180.0)
-//};
+/*
+Camera cam{
+    Vec3f(0.0f, 0.0f, 2.4142f), // У модели в GeoGebra позиция камеры выбрана не вполне удачно - не в нуле.
+    (90.0 + 0.0) * (std::numbers::pi / 180.0),
+    (90.0 + 0.0) * (std::numbers::pi / 180.0)
+};
+*/
 
-//Camera cam{
-//    Vec3f(2.0f, 0.0f, -3.0f),
-//    (180.0 + 90.0) * (std::numbers::pi / 180.0),
-//    (90.0) * (std::numbers::pi / 180.0)
-//};
+/*
+Camera cam{
+    Vec3f(1.0f, 2.0f, 2.0f),
+    (90.0 + 10.0) * (std::numbers::pi / 180.0),
+    (90.0 + 45.0) * (std::numbers::pi / 180.0)
+};
+*/
 
-//Camera cam{
-//    Vec3f(-6.0f, 4.0f, 2.0f),
-//    106.7194 * (std::numbers::pi / 180.0),
-//    109.7616 * (std::numbers::pi / 180.0)
-//};
+/*
+Camera cam{
+    Vec3f(2.0f, 0.0f, -3.0f),
+    (180.0 + 90.0) * (std::numbers::pi / 180.0),
+    (90.0) * (std::numbers::pi / 180.0)
+};
+*/
+
+/*
+Camera cam{
+    Vec3f(-6.0f, 4.0f, 2.0f),
+    106.7194 * (std::numbers::pi / 180.0),
+    109.7616 * (std::numbers::pi / 180.0)
+};
+*/
 
 int main() {
     sf::RenderWindow window(sf::VideoMode(w, h), "Software Renderer");
@@ -97,7 +117,6 @@ int main() {
 
     Assimp::Importer importer;
     //const aiScene* scene = importer.ReadFile("data/box_textured/scene.gltf",
-    //const aiScene* scene = importer.ReadFile("data/fuel_barrel/scene.gltf",
     //const aiScene* scene = importer.ReadFile("data/fuel_barrel/scene.gltf",
     const aiScene* scene = importer.ReadFile("data/pony_cartoon/scene.gltf",
         aiProcess_CalcTangentSpace
@@ -131,9 +150,9 @@ int main() {
         //draw_mesh_(mesh, frame_buffer, Vec3f(0.0f, -0.5f, 0.0f), Vec3f(-5.0f, 0.0f, -5.5f));
         //draw_mesh_(mesh, frame_buffer, Vec3f(0.0f, 0.5f, 0.0f), Vec3f(5.0f, 0.0f, -5.5f));
         //draw_mesh_(mesh, frame_buffer, Vec3f(0.0f, 0.0f, 0.0f), Vec3f(0.0f, 3.0f, -5.5f));
-        //draw_mesh_(mesh, frame_buffer, Vec3f(0.0f, 0.0f, 0.0f), Vec3f(0.0f, -3.0f, -5.5f));
+        draw_mesh_(mesh, frame_buffer, Vec3f(0.0f, angle * 30.0f, 0.0f), Vec3f(0.0f, -3.0f, -5.5f));
         //draw_mesh_(mesh, frame_buffer, Vec3f(0.0f, angle * 30.0f, 0.0f), Vec3f(0.0f, std::sin(angle) * 4.5f, -6.0f));
-        draw_mesh_(mesh, frame_buffer, Vec3f(angle * 30.0f, 0.0f, 0.0f), Vec3f(std::sin(angle) * 5.0f, -2.5f, -6.0f));
+        //draw_mesh_(mesh, frame_buffer, Vec3f(angle * 30.0f, 0.0f, 0.0f), Vec3f(std::sin(angle) * 5.0f, -2.5f, -6.0f));
         //draw_mesh_(mesh, frame_buffer, Vec3f(25.0f, 10.0f, 0.0f), Vec3f(std::cos(angle) * 5.0f, std::sin(angle) * 5.0f, std::cos(angle) * 2.0 - 7.0f));
 
         texture.update(frame_buffer.data());
@@ -225,8 +244,11 @@ void draw_mesh_(const aiMesh* mesh, std::vector<sf::Uint8>& frame_buffer, const 
     Mat4f rotation_y_mat = Mat4f::create_rotation_y(rotation.y * (std::numbers::pi / 180.0));
     Mat4f rotation_z_mat = Mat4f::create_rotation_z(rotation.z * (std::numbers::pi / 180.0));
 
-    const float far_clipping_plane_z = -10.0f;
-    const float near_clipping_plane_z = -8.0f;
+    //const float far_clipping_plane_z = -10.0f;
+    //const float near_clipping_plane_z = -8.0f;
+
+    const float far_clipping_plane_z = -50.0f;
+    const float near_clipping_plane_z = -1.0f;
 
     std::vector<Polygon> polygons;
     polygons.reserve(mesh->mNumFaces);
@@ -258,8 +280,8 @@ void draw_mesh_(const aiMesh* mesh, std::vector<sf::Uint8>& frame_buffer, const 
         }
 
         // Backface culling in camera space.
-        /*if (is_backfaced(polygon))
-            continue;*/
+        if (is_backfaced(polygon))
+            continue;
 
             // Far plane culling.
         if (polygon.vertices[0].pos.z <= far_clipping_plane_z &&
@@ -460,7 +482,8 @@ void draw_mesh_(const aiMesh* mesh, std::vector<sf::Uint8>& frame_buffer, const 
         Vertex v1{ polygon.vertices[1].pos, polygon.vertices[1].u, polygon.vertices[1].v };
         Vertex v2{ polygon.vertices[2].pos, polygon.vertices[2].u, polygon.vertices[2].v };
 
-        draw_triangle_(frame_buffer, v0, v1, v2);
+        //draw_wireframe_triangle_(frame_buffer, v0, v1, v2);
+        draw_filled_triangle_(frame_buffer, v0, v1, v2);
     }
 }
 
@@ -983,7 +1006,7 @@ void draw_triangle(Vertex a, Vertex b, Vertex c, sf::VertexArray& frame_buffer, 
     }
 }
 
-void draw_triangle_(std::vector<sf::Uint8>& frame_buffer, Vertex a, Vertex b, Vertex c) {
+void draw_wireframe_triangle_(std::vector<sf::Uint8>& frame_buffer, Vertex a, Vertex b, Vertex c) {
     Vertex a_copy = a;
     Vertex b_copy = b;
     Vertex c_copy = c;
@@ -1155,5 +1178,187 @@ void fill_frame_buffer(std::vector<sf::Uint8>& frame_buffer, sf::Color color) {
         const int x = i % w;
         const int y = i / w;
         set_pixel_color(frame_buffer, x, y, color);
+    }
+}
+
+void draw_filled_triangle_(std::vector<sf::Uint8>& frame_buffer, Vertex a, Vertex b, Vertex c) {
+    draw_filled_triangle(frame_buffer, a.pos.x, a.pos.y, b.pos.x, b.pos.y, c.pos.x, c.pos.y);
+}
+
+void draw_filled_triangle(std::vector<sf::Uint8>& frame_buffer, float x0, float y0, float x1, float y1, float x2, float y2) {
+    // Сортируем вершины по Y по возрастанию.
+    if (y0 > y1) {
+        std::swap(y0, y1);
+        std::swap(x0, x1);
+    }
+    if (y1 > y2) {
+        std::swap(y1, y2);
+        std::swap(x1, x2);
+    }
+    if (y0 > y1) {
+        std::swap(y0, y1);
+        std::swap(x0, x1);
+    }
+
+    // Trivial reject по верхней/нижней границе.
+    // NOTE: Нет смысла исключать ноль для верхней границы, поскольку в итоге все-равно
+    // получим ceil(0)-1 для y-координаты нижней скан-линии и растеризации не будет.
+    // Для нижней же границы ноль нужно исключить, чтобы не было пропуска пикселов по нижней стороне смежного треугольника.
+    if (y2 <= 0.0f || y0 > (h - 1))
+        return;
+
+    // Trivial reject по левой границе.
+    // NOTE: Нет смысла исключать ноль для левой границы, поскольку в итоге все-равно
+    // получим ceil(0)-1 для концов всех скан-линий и растеризации не будет.
+    if ((x0 <= 0.0f) && (x1 <= 0.0f) && (x2 <= 0.0f))
+        return;
+
+    // Trivial reject по правой границе.
+    // NOTE: Важно исключить ноль, чтобы не было пропуска пикселов по правой стороне смежного треугольника.
+    if ((x0 > (w - 1)) && (x1 > (w - 1)) && (x2 > (w - 1)))
+        return;
+
+    // Классифицируем треугольник.
+    // NOTE: Проверяем на точное равенство, а не через epsilon, поскольку в противном случае
+    // возможна некорректная растеризация: пропуск пиксела или двойная растеризация одного и того же
+    // пиксела для двух смежных треугольников.
+    const bool flat_bottom = (y1 == y2);
+    const bool flat_top = (y0 == y1);
+    if (flat_bottom) {
+        draw_flat_bottom_filled_triangle(frame_buffer, x0, y0, x1, y1, x2, y2, sf::Color::Red);
+    }
+    else if (flat_top) {
+        draw_flat_top_filled_triangle(frame_buffer, x0, y0, x1, y1, x2, y2, sf::Color::Green);
+    }
+    // Разделяем треугольник на flat_bottom и flat_top.
+    else {
+        const float inv_slope = (x2 - x0) / (y2 - y0); // Наклон самой длинной грани.
+        const float height_top_triangle = y1 - y0;
+
+        // Точка пересечения на длинной грани при разделении треугольников.
+        const float intersect_x = x0 + height_top_triangle * inv_slope;
+        const float intersect_y = y1;
+
+        draw_flat_bottom_filled_triangle(frame_buffer, x0, y0, intersect_x, intersect_y, x1, y1, sf::Color::Red);
+        draw_flat_top_filled_triangle(frame_buffer, intersect_x, intersect_y, x1, y1, x2, y2, sf::Color::Green);
+    }
+}
+
+void draw_flat_bottom_filled_triangle(std::vector<sf::Uint8>& frame_buffer, float x0, float y0, float x1, float y1, float x2, float y2, sf::Color color) {
+    // Сортируем нижние вершины по X по возрастанию.
+    if (x1 > x2) {
+        std::swap(x1, x2);
+        std::swap(y1, y2);
+    }
+
+    const float height = y2 - y0; // Определяем высоту по правой нижней вершине.
+    const float slope_left_inv = (x1 - x0) / height;
+    const float slope_right_inv = (x2 - x0) / height;
+
+    // Начинаем отрисовку с верхней вершины.
+    float scan_line_start = x0;
+    float scan_line_end = x0;
+
+    // Клиппинг с верхней границей экрана.
+    int y_start = 0;
+    if (y0 < 0.0f) {
+        // Корректируем начало и конец первой скан-линии.
+        const float clip_height = 0.0f - y0;
+        scan_line_start = scan_line_start + clip_height * slope_left_inv;
+        scan_line_end = scan_line_end + clip_height * slope_right_inv;
+    }
+    else {
+        // Определяем y-координату первой скан-линии (следуем правилу top-left).
+        y_start = std::ceil(y0);
+
+        // Корректируем начало и конец первой скан-линии.
+        const float delta_y = y_start - y0;
+        scan_line_start = scan_line_start + delta_y * slope_left_inv;
+        scan_line_end = scan_line_end + delta_y * slope_right_inv;
+    }
+
+    // Определяем y-координату последней скан-линии (следуем правилу top-left).
+    // NOTE: Если для текущего flat_bottom треугольника существует снизу смежный flat_top,
+    // то поскольку последняя скан-линия flat_bottom треугольника определяется по правой нижней координате,
+    // то первая скан-линия смежного flat_top треугольника должна определяться по правой верхней,
+    // чтобы не было ни пропуска скан-линии ни наложения.
+    int y_end = std::ceil(y2) - 1;
+    if (y2 > h) {
+        y_end = h - 1;
+    }
+
+    for (int y = y_start; y <= y_end; y++) {
+        // Вычисляем целочисленные значения начала и конца текущей скан-линии, следуя правилу top-left.
+        // Если начало скан-линии находится за левой границей окна, прижимаем к нулю.
+        // Если конец скан-линии находится за правой границей окна плюс один пиксел, то прижимаем к правой границе.
+        const int scan_line_start_int = (scan_line_start < 0.0f) ? 0 : std::ceil(scan_line_start);
+        const int scan_line_end_int = (scan_line_end > w) ? (w - 1) : (std::ceil(scan_line_end) - 1);
+
+        for (int x = scan_line_start_int; x <= scan_line_end_int; x++) {
+            set_pixel_color(frame_buffer, x, y, color);
+        }
+
+        // Вычисляем начало и конец следующей скан-линии.
+        scan_line_start += slope_left_inv;
+        scan_line_end += slope_right_inv;
+    }
+}
+
+void draw_flat_top_filled_triangle(std::vector<sf::Uint8>& frame_buffer, float x0, float y0, float x1, float y1, float x2, float y2, sf::Color color) {
+    // Сортируем верхние вершины по X по возрастанию.
+    if (x0 > x1) {
+        std::swap(x0, x1);
+        std::swap(y0, y1);
+    }
+
+    const float height = y2 - y1; // Определяем высоту по правой верхней вершине.
+    const float slope_left_inv = (x2 - x0) / height;
+    const float slope_right_inv = (x2 - x1) / height;
+
+    // Начинаем отрисовку с двух верхних вершин.
+    float scan_line_start = x0;
+    float scan_line_end = x1;
+
+    // Клиппинг с верхней границей экрана.
+    // NOTE: Чтобы быть последовательными, ориентируемся на правую вершину, поскольку по ней определяем
+    // высоту и по ней же определяем y-координату первой скан-линии. Более того, по правой же вершине определяем
+    // для flat_bottom треугольника y-координату последней скан-линии.
+    int y_start = 0;
+    if (y1 < 0.0f) {
+        // Корректируем начало и конец первой скан-линии.
+        const float clip_height = 0.0f - y1;
+        scan_line_start = scan_line_start + clip_height * slope_left_inv;
+        scan_line_end = scan_line_end + clip_height * slope_right_inv;
+    }
+    else {
+        // Первую скан-линию определяем по правой верхней вершине, как описано в замечании
+        // к растеризации flat_bottom треугольника.
+        y_start = std::ceil(y1);
+
+        // Корректируем начало и конец первой скан-линии.
+        const float delta_y = y_start - y1;
+        scan_line_start = scan_line_start + delta_y * slope_left_inv;
+        scan_line_end = scan_line_end + delta_y * slope_right_inv;
+    }
+
+    int y_end = std::ceil(y2) - 1;
+    if (y2 > h) {
+        y_end = h - 1;
+    }
+
+    for (int y = y_start; y <= y_end; y++) {
+        // Вычисляем целочисленные значения начала и конца текущей скан-линии, следуя правилу top-left.
+        // Если начало скан-линии находится за левой границей окна, прижимаем к нулю.
+        // Если конец скан-линии находится за правой границей окна плюс один пиксел, то прижимаем к правой границе.
+        const int scan_line_start_int = (scan_line_start < 0.0f) ? 0 : std::ceil(scan_line_start);
+        const int scan_line_end_int = (scan_line_end > w) ? (w - 1) : (std::ceil(scan_line_end) - 1);
+
+        for (int x = scan_line_start_int; x <= scan_line_end_int; x++) {
+            set_pixel_color(frame_buffer, x, y, color);
+        }
+
+        // Вычисляем начало и конец следующей скан-линии.
+        scan_line_start += slope_left_inv;
+        scan_line_end += slope_right_inv;
     }
 }
