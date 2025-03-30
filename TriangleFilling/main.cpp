@@ -39,6 +39,20 @@ void draw_triangle_16(std::vector<sf::Uint8>& frame_buffer); // flat_top.
 void draw_triangle_17(std::vector<sf::Uint8>& frame_buffer); // general.
 void draw_triangle_18(std::vector<sf::Uint8>& frame_buffer); // general. Линия разделения в точности на границе окна.
 
+// Клиппинг с левой границей экрана.
+void draw_triangle_19(std::vector<sf::Uint8>& frame_buffer);
+// Клиппинг с правой границей экрана.
+void draw_triangle_20(std::vector<sf::Uint8>& frame_buffer);
+
+// Trivial reject по верхней границе.
+void draw_triangle_21(std::vector<sf::Uint8>& frame_buffer);
+// Trivial reject по нижней границе.
+void draw_triangle_22(std::vector<sf::Uint8>& frame_buffer);
+// Trivial reject по левой границе.
+void draw_triangle_23(std::vector<sf::Uint8>& frame_buffer);
+// Trivial reject по правой границе.
+void draw_triangle_24(std::vector<sf::Uint8>& frame_buffer);
+
 void draw_filled_triangle(std::vector<sf::Uint8>& frame_buffer, float x0, float y0, float x1, float y1, float x2, float y2);
 void draw_flat_bottom_filled_triangle(std::vector<sf::Uint8>& frame_buffer, float x0, float y0, float x1, float y1, float x2, float y2, sf::Color color);
 void draw_flat_top_filled_triangle(std::vector<sf::Uint8>& frame_buffer, float x0, float y0, float x1, float y1, float x2, float y2, sf::Color color);
@@ -123,6 +137,14 @@ void test_draw_filled_triangle(std::vector<sf::Uint8>& frame_buffer) {
     draw_triangle_16(frame_buffer);
     draw_triangle_17(frame_buffer);
     draw_triangle_18(frame_buffer);
+
+    draw_triangle_19(frame_buffer);
+    draw_triangle_20(frame_buffer);
+
+    draw_triangle_21(frame_buffer);
+    draw_triangle_22(frame_buffer);
+    draw_triangle_23(frame_buffer);
+    draw_triangle_24(frame_buffer);
 }
 
 void draw_triangle_1(std::vector<sf::Uint8>& frame_buffer) {
@@ -359,8 +381,92 @@ void draw_triangle_18(std::vector<sf::Uint8>& frame_buffer) {
     draw_filled_triangle(frame_buffer, x0, y0, x1, y1, x2, y2);
 }
 
+void draw_triangle_19(std::vector<sf::Uint8>& frame_buffer) {
+    const float x0 = -241.0832003689f;
+    const float y0 = 184.4208070112f;
+
+    const float x1 = 318.9126335423f;
+    const float y1 = 389.8673086772f;
+
+    const float x2 = -85.75861916031f;
+    const float y2 = 786.4452787002f;
+
+    draw_filled_triangle(frame_buffer, x0, y0, x1, y1, x2, y2);
+}
+
+void draw_triangle_20(std::vector<sf::Uint8>& frame_buffer) {
+    const float x0 = 1000.0f;
+    const float y0 = -101.0f;
+
+    const float x1 = 1079.060554225f;
+    const float y1 = 282.3138692418f;
+
+    const float x2 = 596.6828956352f;
+    const float y2 = 346.2434384521f;
+
+    draw_filled_triangle(frame_buffer, x0, y0, x1, y1, x2, y2);
+}
+
+void draw_triangle_21(std::vector<sf::Uint8>& frame_buffer) {
+    const float x0 = 613.9784610366f;
+    const float y0 = -6.2444807396f;
+
+    const float x1 = 566.4761801136f;
+    const float y1 = -50.6061149898f;
+
+    const float x2 = 646.9552510988f;
+    const float y2 = -92.6122642356f;
+
+    draw_filled_triangle(frame_buffer, x0, y0, x1, y1, x2, y2);
+}
+
+void draw_triangle_22(std::vector<sf::Uint8>& frame_buffer) {
+    const float x0 = 644.0225305711f;
+    const float y0 = 646.92583968459f;
+
+    const float x1 = 709.8665221680f;
+    const float y1 = 632.23623526015f;
+    //const float y1 = 599.0f;
+
+    const float x2 = 690.6836269784f;
+    const float y2 = 603.029845286841f;
+    //const float y2 = 599.0f;
+
+    draw_filled_triangle(frame_buffer, x0, y0, x1, y1, x2, y2);
+}
+
+void draw_triangle_23(std::vector<sf::Uint8>& frame_buffer) {
+    const float x0 = -9.057240408918f;
+    //const float x0 = 0.0f;
+    const float y0 = 31.7461100236f;
+
+    const float x1 = -6.249007415968f;
+    //const float x1 = 0.0f;
+    const float y1 = 134.9095219599f;
+
+    const float x2 = -111.2917090746f;
+    const float y2 = 96.9391045348f;
+
+    draw_filled_triangle(frame_buffer, x0, y0, x1, y1, x2, y2);
+}
+
+void draw_triangle_24(std::vector<sf::Uint8>& frame_buffer) {
+    const float x0 = 821.6681340053f;
+    //const float x0 = w - 1;
+    const float y0 = 368.8034453936f;
+
+    const float x1 = 806.5047362218f;
+    //const float x1 = w - 1;
+    const float y1 = 557.05452938627f;
+
+    const float x2 = 919.9969859492f;
+    const float y2 = 513.86721311848f;
+
+    draw_filled_triangle(frame_buffer, x0, y0, x1, y1, x2, y2);
+}
+
 void draw_filled_triangle(std::vector<sf::Uint8>& frame_buffer, float x0, float y0, float x1, float y1, float x2, float y2) {
-    // Сортируем вершины по Y по возврастанию.
+    // Сортируем вершины по Y по возрастанию.
     if (y0 > y1) {
         std::swap(y0, y1);
         std::swap(x0, x1);
@@ -373,6 +479,24 @@ void draw_filled_triangle(std::vector<sf::Uint8>& frame_buffer, float x0, float 
         std::swap(y0, y1);
         std::swap(x0, x1);
     }
+
+    // Trivial reject по верхней/нижней границе.
+    // NOTE: Нет смысла исключать ноль для верхней границы, поскольку в итоге все-равно
+    // получим ceil(0)-1 для y-координаты нижней скан-линии и растеризации не будет.
+    // Для нижней же границы ноль нужно исключить, чтобы не было пропуска пикселов по нижней стороне смежного треугольника.
+    if (y2 <= 0.0f || y0 > (h - 1))
+        return;
+
+    // Trivial reject по левой границе.
+    // NOTE: Нет смысла исключать ноль для левой границы, поскольку в итоге все-равно
+    // получим ceil(0)-1 для концов всех скан-линий и растеризации не будет.
+    if ((x0 <= 0.0f) && (x1 <= 0.0f) && (x2 <= 0.0f))
+        return;
+
+    // Trivial reject по правой границе.
+    // NOTE: Важно исключить ноль, чтобы не было пропуска пикселов по правой стороне смежного треугольника.
+    if ((x0 > (w - 1)) && (x1 > (w - 1)) && (x2 > (w - 1)))
+        return;
 
     // Классифицируем треугольник.
     // NOTE: Проверяем на точное равенство, а не через epsilon, поскольку в противном случае
@@ -434,8 +558,8 @@ void draw_flat_bottom_filled_triangle(std::vector<sf::Uint8>& frame_buffer, floa
     }
 
     // Определяем y-координату последней скан-линии (следуем правилу top-left).
-    // NOTE: Если для текущего flat_bottom треугольника существует смежный flat_top,
-    // то, поскольку последняя скан-линия flat_bottom треугольника определяется по правой нижней координате,
+    // NOTE: Если для текущего flat_bottom треугольника существует снизу смежный flat_top,
+    // то поскольку последняя скан-линия flat_bottom треугольника определяется по правой нижней координате,
     // то первая скан-линия смежного flat_top треугольника должна определяться по правой верхней,
     // чтобы не было ни пропуска скан-линии ни наложения.
     int y_end = std::ceil(y2) - 1;
@@ -444,12 +568,11 @@ void draw_flat_bottom_filled_triangle(std::vector<sf::Uint8>& frame_buffer, floa
     }
 
     for (int y = y_start; y <= y_end; y++) {
-        // Вычисляем целочисленные значения начала и конца текущей скан-линии,
-        // следуя правилу top-left.
-        const int scan_line_start_int = std::ceil(scan_line_start);
-        const int scan_line_end_int = std::ceil(scan_line_end) - 1;
-
-        //std::cout << y << "," << scan_line_start_int << "," << scan_line_end_int << std::endl;
+        // Вычисляем целочисленные значения начала и конца текущей скан-линии, следуя правилу top-left.
+        // Если начало скан-линии находится за левой границей окна, прижимаем к нулю.
+        // Если конец скан-линии находится за правой границей окна плюс один пиксел, то прижимаем к правой границе.
+        const int scan_line_start_int = (scan_line_start < 0.0f) ? 0 : std::ceil(scan_line_start);
+        const int scan_line_end_int = (scan_line_end > w) ? (w - 1) : (std::ceil(scan_line_end) - 1);
 
         for (int x = scan_line_start_int; x <= scan_line_end_int; x++) {
             set_pixel_color(frame_buffer, x, y, color);
@@ -480,11 +603,6 @@ void draw_flat_top_filled_triangle(std::vector<sf::Uint8>& frame_buffer, float x
     // NOTE: Чтобы быть последовательными, ориентируемся на правую вершину, поскольку по ней определяем
     // высоту и по ней же определяем y-координату первой скан-линии. Более того, по правой же вершине определяем
     // для flat_bottom треугольника y-координату последней скан-линии.
-    // 
-    // Но фактически, в случае, когда y-координаты верхних вершин различаются на величину меньше epsilon,
-    // нет разницы, на какую вершину ориентироваться, разница будет лишь в том, какой slope будет вычислен с
-    // большей погрешность: левый или правый, что в свою очередь определяет, какая часть первой скан-линии
-    // будет вычислена с большей погрешностью - левая или правая.
     int y_start = 0;
     if (y1 < 0.0f) {
         // Корректируем начало и конец первой скан-линии.
@@ -509,12 +627,11 @@ void draw_flat_top_filled_triangle(std::vector<sf::Uint8>& frame_buffer, float x
     }
 
     for (int y = y_start; y <= y_end; y++) {
-        // Вычисляем целочисленные значения начала и конца текущей скан-линии,
-        // следуя правилу top-left.
-        const int scan_line_start_int = std::ceil(scan_line_start);
-        const int scan_line_end_int = std::ceil(scan_line_end) - 1;
-
-        //std::cout << y << "," << scan_line_start_int << "," << scan_line_end_int << std::endl;
+        // Вычисляем целочисленные значения начала и конца текущей скан-линии, следуя правилу top-left.
+        // Если начало скан-линии находится за левой границей окна, прижимаем к нулю.
+        // Если конец скан-линии находится за правой границей окна плюс один пиксел, то прижимаем к правой границе.
+        const int scan_line_start_int = (scan_line_start < 0.0f) ? 0 : std::ceil(scan_line_start);
+        const int scan_line_end_int = (scan_line_end > w) ? (w - 1) : (std::ceil(scan_line_end) - 1);
 
         for (int x = scan_line_start_int; x <= scan_line_end_int; x++) {
             set_pixel_color(frame_buffer, x, y, color);
