@@ -11,6 +11,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "2DLineClipping", "2DLineCli
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TriangleFilling", "TriangleFilling\TriangleFilling.vcxproj", "{BEADF394-C2A3-475F-93B3-47354AE815C6}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ColorInterpolation", "ColorInterpolation\ColorInterpolation.vcxproj", "{036AB95D-6982-4D34-964A-7BA82D1B6CB3}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -51,6 +53,14 @@ Global
 		{BEADF394-C2A3-475F-93B3-47354AE815C6}.Release|x64.Build.0 = Release|x64
 		{BEADF394-C2A3-475F-93B3-47354AE815C6}.Release|x86.ActiveCfg = Release|Win32
 		{BEADF394-C2A3-475F-93B3-47354AE815C6}.Release|x86.Build.0 = Release|Win32
+		{036AB95D-6982-4D34-964A-7BA82D1B6CB3}.Debug|x64.ActiveCfg = Debug|x64
+		{036AB95D-6982-4D34-964A-7BA82D1B6CB3}.Debug|x64.Build.0 = Debug|x64
+		{036AB95D-6982-4D34-964A-7BA82D1B6CB3}.Debug|x86.ActiveCfg = Debug|Win32
+		{036AB95D-6982-4D34-964A-7BA82D1B6CB3}.Debug|x86.Build.0 = Debug|Win32
+		{036AB95D-6982-4D34-964A-7BA82D1B6CB3}.Release|x64.ActiveCfg = Release|x64
+		{036AB95D-6982-4D34-964A-7BA82D1B6CB3}.Release|x64.Build.0 = Release|x64
+		{036AB95D-6982-4D34-964A-7BA82D1B6CB3}.Release|x86.ActiveCfg = Release|Win32
+		{036AB95D-6982-4D34-964A-7BA82D1B6CB3}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
