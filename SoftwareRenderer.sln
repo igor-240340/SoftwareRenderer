@@ -13,6 +13,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TriangleFilling", "Triangle
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ColorInterpolation", "ColorInterpolation\ColorInterpolation.vcxproj", "{036AB95D-6982-4D34-964A-7BA82D1B6CB3}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ZBuffer", "ZBuffer\ZBuffer.vcxproj", "{904F5A13-D8BA-4208-8682-9038310B3C3A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -61,6 +63,14 @@ Global
 		{036AB95D-6982-4D34-964A-7BA82D1B6CB3}.Release|x64.Build.0 = Release|x64
 		{036AB95D-6982-4D34-964A-7BA82D1B6CB3}.Release|x86.ActiveCfg = Release|Win32
 		{036AB95D-6982-4D34-964A-7BA82D1B6CB3}.Release|x86.Build.0 = Release|Win32
+		{904F5A13-D8BA-4208-8682-9038310B3C3A}.Debug|x64.ActiveCfg = Debug|x64
+		{904F5A13-D8BA-4208-8682-9038310B3C3A}.Debug|x64.Build.0 = Debug|x64
+		{904F5A13-D8BA-4208-8682-9038310B3C3A}.Debug|x86.ActiveCfg = Debug|Win32
+		{904F5A13-D8BA-4208-8682-9038310B3C3A}.Debug|x86.Build.0 = Debug|Win32
+		{904F5A13-D8BA-4208-8682-9038310B3C3A}.Release|x64.ActiveCfg = Release|x64
+		{904F5A13-D8BA-4208-8682-9038310B3C3A}.Release|x64.Build.0 = Release|x64
+		{904F5A13-D8BA-4208-8682-9038310B3C3A}.Release|x86.ActiveCfg = Release|Win32
+		{904F5A13-D8BA-4208-8682-9038310B3C3A}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
