@@ -132,6 +132,14 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Mat4f.cpp" />
+    <ClCompile Include="Vec3f.cpp" />
+    <ClCompile Include="Vec4f.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Mat4f.h" />
+    <ClInclude Include="Vec3f.h" />
+    <ClInclude Include="Vec4f.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -1,7 +1,12 @@
 #include <iostream>
 #include <ranges>
+#include <numbers>
 
 #include <SFML/Graphics.hpp>
+
+#include "Vec3f.h"
+#include "Vec4f.h"
+#include "Mat4f.h"
 
 struct Vertex {
     float x, y, z;
@@ -94,49 +99,131 @@ bool perform_depth_test(std::vector<float>& z_buffer, int frag_x, int frag_y, fl
 }
 
 void test_z_buffer_1(std::vector<sf::Uint8>& frame_buffer, std::vector<float>& z_buffer) {
-    // NOTE: Мы сразу инициализируем треугольники готовыми значениями в экранных координатах (z уже в ndc).
-    // Данные референсных треугольников (параметры проекции и пр.) см. в /docs/z_buffer.
     draw_red_triangle_1(frame_buffer, z_buffer);
     draw_blue_triangle_1(frame_buffer, z_buffer);
 }
 
 void draw_red_triangle_1(std::vector<sf::Uint8>& frame_buffer, std::vector<float>& z_buffer, sf::Color color) {
-    Vertex v0{ 429.87526371883301015991f, 278.213673882153795979357f, 0.9771141927369544193548f };
-    Vertex v1{ 399.5f, 281.423575951731450822185f, 0.984848484848484848475f };
-    Vertex v2{ 399.3023924950105377224130415f, 301.0083818992801606481207831f, 0.994719847236195996216935f };
+    Vec4f v0_pos_world{ 0.12858511992886f, 0.09014727201472f, -3.062135394734f };
+    Vec4f v1_pos_world{ 0.0f, 0.1f, -4.0f };
+    Vec4f v2_pos_world{ -0.0017940119725222f, -0.013699806553022f, -6.567130320242f };
+
+    const Mat4f proj = Mat4f::create_perspective(
+        static_cast<float>(45.0 * (std::numbers::pi / 180.0)), static_cast<float>(w) / h, 0.1f, 10.0f);
+
+    Vec4f v0_pos_clip = proj * v0_pos_world;
+    Vec4f v1_pos_clip = proj * v1_pos_world;
+    Vec4f v2_pos_clip = proj * v2_pos_world;
+
+    Vec4f v0_pos_ndc = v0_pos_clip / v0_pos_clip.w;
+    Vec4f v1_pos_ndc = v1_pos_clip / v1_pos_clip.w;
+    Vec4f v2_pos_ndc = v2_pos_clip / v2_pos_clip.w;
+
+    const Mat4f viewport = Mat4f::create_viewport(w, h);
+    Vec4f v0_pos_screen = viewport * v0_pos_ndc;
+    Vec4f v1_pos_screen = viewport * v1_pos_ndc;
+    Vec4f v2_pos_screen = viewport * v2_pos_ndc;
+
+    Vertex v0{ v0_pos_screen.x, v0_pos_screen.y, v0_pos_screen.z };
+    Vertex v1{ v1_pos_screen.x, v1_pos_screen.y, v1_pos_screen.z };
+    Vertex v2{ v2_pos_screen.x, v2_pos_screen.y, v2_pos_screen.z };
 
     draw_filled_triangle(frame_buffer, z_buffer, v0, v1, v2, color);
 }
 
 void draw_blue_triangle_1(std::vector<sf::Uint8>& frame_buffer, std::vector<float>& z_buffer, sf::Color color) {
-    Vertex v0{ 410.0021814246378972501077f, 273.2019727100524486681744f, 0.98268269778828361809463f };
-    Vertex v1{ 394.1548259360906275421404f, 306.1965571618019583830673f, 0.98296553805218065971735f };
-    Vertex v2{ 411.70024765273320929807241f, 298.84448640827966537345991f, 0.99009821541718905839786f };
+    Vec4f v0_pos_world{ 0.05348720083878f, 0.1339907277809f, -3.684037874323f };
+    Vec4f v1_pos_world{ -0.02750651338714f, -0.03447517605658f, -3.722437583851f };
+    Vec4f v2_pos_world{ 0.08517046970116f, 0.00457807936321f, -5.049799420868f };
+
+    const Mat4f proj = Mat4f::create_perspective(
+        static_cast<float>(45.0 * (std::numbers::pi / 180.0)), static_cast<float>(w) / h, 0.1f, 10.0f);
+
+    Vec4f v0_pos_clip = proj * v0_pos_world;
+    Vec4f v1_pos_clip = proj * v1_pos_world;
+    Vec4f v2_pos_clip = proj * v2_pos_world;
+
+    Vec4f v0_pos_ndc = v0_pos_clip / v0_pos_clip.w;
+    Vec4f v1_pos_ndc = v1_pos_clip / v1_pos_clip.w;
+    Vec4f v2_pos_ndc = v2_pos_clip / v2_pos_clip.w;
+
+    const Mat4f viewport = Mat4f::create_viewport(w, h);
+    Vec4f v0_pos_screen = viewport * v0_pos_ndc;
+    Vec4f v1_pos_screen = viewport * v1_pos_ndc;
+    Vec4f v2_pos_screen = viewport * v2_pos_ndc;
+
+    Vertex v0{ v0_pos_screen.x, v0_pos_screen.y, v0_pos_screen.z };
+    Vertex v1{ v1_pos_screen.x, v1_pos_screen.y, v1_pos_screen.z };
+    Vertex v2{ v2_pos_screen.x, v2_pos_screen.y, v2_pos_screen.z };
 
     draw_filled_triangle(frame_buffer, z_buffer, v0, v1, v2, color);
+
+    const int index = 281 * w + 407;
+    std::cout << z_buffer[index] << '\n';
 }
 
 void test_z_buffer_2(std::vector<sf::Uint8>& frame_buffer, std::vector<float>& z_buffer) {
-    // NOTE: Мы сразу инициализируем треугольники готовыми значениями в экранных координатах (z уже в ndc).
-    // Данные референсных треугольников (параметры проекции и пр.) см. в docs/z_buffer/test_z_buffer_2.
     draw_red_triangle_2(frame_buffer, z_buffer);
     draw_blue_triangle_2(frame_buffer, z_buffer);
 }
 
 void draw_red_triangle_2(std::vector<sf::Uint8>& frame_buffer, std::vector<float>& z_buffer, sf::Color color) {
-    Vertex v0{ 766.5420725179708132653f, 513.4710784732278997712f, 0.982260700923388607925f };
-    Vertex v1{ 411.956887564527930729294f, 468.132227879016286218972f, 0.9816997730122647361999f };
-    Vertex v2{ 455.8765139316101501837f, 158.7993787597697993863f, 0.995852132522469078377f };
+    Vec4f v0_pos_world{ 1.840996095964f, -1.073676172127f, -3.628196093860f };
+    Vec4f v1_pos_world{ 0.06124679400900f, -0.8294603178124f, -3.556538776620f };
+    Vec4f v2_pos_world{ 0.5524953604496f, 1.379455366808f, -7.088986515136f };
+
+    const Mat4f proj = Mat4f::create_perspective(
+        static_cast<float>(45.0 * (std::numbers::pi / 180.0)), static_cast<float>(w) / h, 0.1f, 10.0f);
+
+    Vec4f v0_pos_clip = proj * v0_pos_world;
+    Vec4f v1_pos_clip = proj * v1_pos_world;
+    Vec4f v2_pos_clip = proj * v2_pos_world;
+
+    Vec4f v0_pos_ndc = v0_pos_clip / v0_pos_clip.w;
+    Vec4f v1_pos_ndc = v1_pos_clip / v1_pos_clip.w;
+    Vec4f v2_pos_ndc = v2_pos_clip / v2_pos_clip.w;
+
+    const Mat4f viewport = Mat4f::create_viewport(w, h);
+    Vec4f v0_pos_screen = viewport * v0_pos_ndc;
+    Vec4f v1_pos_screen = viewport * v1_pos_ndc;
+    Vec4f v2_pos_screen = viewport * v2_pos_ndc;
+
+    Vertex v0{ v0_pos_screen.x, v0_pos_screen.y, v0_pos_screen.z };
+    Vertex v1{ v1_pos_screen.x, v1_pos_screen.y, v1_pos_screen.z };
+    Vertex v2{ v2_pos_screen.x, v2_pos_screen.y, v2_pos_screen.z };
 
     draw_filled_triangle(frame_buffer, z_buffer, v0, v1, v2, color);
 }
 
 void draw_blue_triangle_2(std::vector<sf::Uint8>& frame_buffer, std::vector<float>& z_buffer, sf::Color color) {
-    Vertex v0{ 700.260180421914415334f, 186.0452835278234043394f, 0.983535544185657768075f };
-    Vertex v1{ 300.96275576579127919057f, 256.77482666672850885526f, 0.9941240753837288724578f };
-    Vertex v2{ 604.8665116362462524682f, 553.6157067498294574941f, 0.984758392588700689605f };
+    Vec4f v0_pos_world{ 1.580934848009f, 0.5966194549801f, -3.802308656357f };
+    Vec4f v1_pos_world{ -0.8612277692645f, 0.3735791812889f, -6.322245336638f };
+    Vec4f v2_pos_world{ 1.131590337138f, -1.400787745470f, -3.985780117663f };
+
+    const Mat4f proj = Mat4f::create_perspective(
+        static_cast<float>(45.0 * (std::numbers::pi / 180.0)), static_cast<float>(w) / h, 0.1f, 10.0f);
+
+    Vec4f v0_pos_clip = proj * v0_pos_world;
+    Vec4f v1_pos_clip = proj * v1_pos_world;
+    Vec4f v2_pos_clip = proj * v2_pos_world;
+
+    Vec4f v0_pos_ndc = v0_pos_clip / v0_pos_clip.w;
+    Vec4f v1_pos_ndc = v1_pos_clip / v1_pos_clip.w;
+    Vec4f v2_pos_ndc = v2_pos_clip / v2_pos_clip.w;
+
+    const Mat4f viewport = Mat4f::create_viewport(w, h);
+    Vec4f v0_pos_screen = viewport * v0_pos_ndc;
+    Vec4f v1_pos_screen = viewport * v1_pos_ndc;
+    Vec4f v2_pos_screen = viewport * v2_pos_ndc;
+
+    Vertex v0{ v0_pos_screen.x, v0_pos_screen.y, v0_pos_screen.z };
+    Vertex v1{ v1_pos_screen.x, v1_pos_screen.y, v1_pos_screen.z };
+    Vertex v2{ v2_pos_screen.x, v2_pos_screen.y, v2_pos_screen.z };
 
     draw_filled_triangle(frame_buffer, z_buffer, v0, v1, v2, color);
+
+    const int index = 281 * w + 407;
+    std::cout << z_buffer[index] << '\n';
 }
 
 void draw_filled_triangle(std::vector<sf::Uint8>& frame_buffer, std::vector<float>& z_buffer, Vertex v0, Vertex v1, Vertex v2, sf::Color color) {
