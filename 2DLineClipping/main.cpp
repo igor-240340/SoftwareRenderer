@@ -23,7 +23,7 @@ int main() {
 
     sf::Texture texture;
     if (!texture.create(w, h)) {
-        std::cout << "SFML: Create texture fail.\n";
+        std::cout << "sfml: texture.create() failed\n";
     }
 
     sf::Sprite sprite(texture);
@@ -139,16 +139,10 @@ bool clip_line_coh_suth(float& x0, float& y0, float& x1, float& y1) {
     };
 
     struct Point {
-        float& x;
-        float& y;
+        float x;
+        float y;
         std::bitset<4> region_code;
     };
-
-    Point p1{ x1, y1 };
-    p1.region_code.set(EdgeBit::left, p1.x < 0);
-    p1.region_code.set(EdgeBit::right, p1.x > w - 1);
-    p1.region_code.set(EdgeBit::top, p1.y < 0);
-    p1.region_code.set(EdgeBit::bottom, p1.y > h - 1);
 
     Point p0{ x0, y0 };
     p0.region_code.set(EdgeBit::left, p0.x < 0);
@@ -156,19 +150,22 @@ bool clip_line_coh_suth(float& x0, float& y0, float& x1, float& y1) {
     p0.region_code.set(EdgeBit::top, p0.y < 0);
     p0.region_code.set(EdgeBit::bottom, p0.y > h - 1);
 
+    Point p1{ x1, y1 };
+    p1.region_code.set(EdgeBit::left, p1.x < 0);
+    p1.region_code.set(EdgeBit::right, p1.x > w - 1);
+    p1.region_code.set(EdgeBit::top, p1.y < 0);
+    p1.region_code.set(EdgeBit::bottom, p1.y > h - 1);
+
     bool line_inside = (p0.region_code | p1.region_code).none();
     bool line_outside = (p0.region_code & p1.region_code).any();
     while (!line_inside && !line_outside) {
         // Make sure the first point is the one that is outside.
-        if (p0.region_code.none()) {
-            std::swap(p0.x, p1.x);
-            std::swap(p0.y, p1.y);
-            std::swap(p0.region_code, p1.region_code);
-        }
+        if (p0.region_code.none())
+            std::swap(p0, p1);
 
         // Find the first edge outside of which the point is.
-        EdgeBit first_edge;
-        for (int i = EdgeBit::left; i >= EdgeBit::bottom; i--) {
+        EdgeBit first_edge{};
+        for (int i = 3; i >= 0; --i) {
             if (p0.region_code[i]) {
                 first_edge = static_cast<EdgeBit>(i);
                 break;
@@ -176,7 +173,7 @@ bool clip_line_coh_suth(float& x0, float& y0, float& x1, float& y1) {
         }
 
         if (first_edge == EdgeBit::left || first_edge == EdgeBit::right) {
-            float edge_x = first_edge == EdgeBit::left ? 0 : w - 1;
+            float edge_x = first_edge == EdgeBit::left ? 0 : (w - 1);
             float slope = (p1.y - p0.y) / (p1.x - p0.x);
 
             float x_excess = edge_x - p0.x;
@@ -184,7 +181,7 @@ bool clip_line_coh_suth(float& x0, float& y0, float& x1, float& y1) {
             p0.y += x_excess * slope;
         }
         else {
-            float edge_y = first_edge == EdgeBit::top ? 0 : h - 1;
+            float edge_y = first_edge == EdgeBit::top ? 0 : (h - 1);
             float inv_slope = (p1.x - p0.x) / (p1.y - p0.y);
 
             float y_excess = edge_y - p0.y;
@@ -201,7 +198,12 @@ bool clip_line_coh_suth(float& x0, float& y0, float& x1, float& y1) {
         line_outside = (p0.region_code & p1.region_code).any();
     }
 
-    return line_inside ? true : false;
+    x0 = p0.x;
+    y0 = p0.y;
+    x1 = p1.x;
+    y1 = p1.y;
+
+    return line_inside;
 }
 
 void test_clipping(std::vector<sf::Uint8>& frame_buffer) {
@@ -219,7 +221,7 @@ void test_clipping(std::vector<sf::Uint8>& frame_buffer) {
             {-200.0f, -100.0f, -200.0f, 700.0f}, // Trivially rejected.
             {-100.0f, 800.0f, 900.0f, 800.0f}, // Trivially rejected.
             {1000.0f, -100.0f, 1000.0f, 100.0f}, // Trivially rejected.
-            {-50.0f, 100.0f, 50.0f, 100.0f},
+            {50.0f, 100.0f, -50.0f, 100.0f},
             {200.0f, 50.0f, 200.0f, -50.0f},
             {850.0f, 100.0f, 750.0f, 100.0f},
             {200.0f, 550.0f, 200.0f, 650.0f},
