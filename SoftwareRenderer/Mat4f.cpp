@@ -31,7 +31,7 @@ Mat4f Mat4f::create_perspective(float fov_vert_rad, float aspect_ratio, float ne
 
     mat_proj.data.at(0) = 1.0f / (aspect_ratio * std::tanf(fov_vert_rad / 2.0f));
     mat_proj.data.at(5) = 1.0f / std::tanf(fov_vert_rad / 2.0f);
-    mat_proj.data.at(10) = far / (far - near);
+    mat_proj.data.at(10) = -far / (far - near);
     mat_proj.data.at(11) = -1.0f;
     mat_proj.data.at(14) = -(far * near) / (far - near);
     mat_proj.data.at(15) = 0.0f;
@@ -42,11 +42,10 @@ Mat4f Mat4f::create_perspective(float fov_vert_rad, float aspect_ratio, float ne
 Mat4f Mat4f::create_viewport(int w, int h) {
     Mat4f mat_view{};
 
-    mat_view.data.at(0) = (w - 1) / 2;
-    mat_view.data.at(5) = -(h - 1) / 2;
-    mat_view.data.at(11) = -1.0f;
-    mat_view.data.at(12) = (w - 1) / 2;
-    mat_view.data.at(13) = (h - 1) / 2;
+    mat_view.data[0] = (w - 1) / 2.0f;
+    mat_view.data[5] = -(h - 1) / 2.0f;
+    mat_view.data[12] = (w - 1) / 2.0f;
+    mat_view.data[13] = (h - 1) / 2.0f;
 
     return mat_view;
 }

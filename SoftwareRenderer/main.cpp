@@ -1,138 +1,61 @@
 #include <iostream>
-#include <format>
-#include <chrono>
-#include <thread>
-#include <random>
-#include <array>
-#include <limits>
+#include <ranges>
 #include <numbers>
-#include <bitset>
+#include <format>
 
 #include <SFML/Graphics.hpp>
 
-#include <assimp/Importer.hpp>
-#include <assimp/scene.h>
-#include <assimp/postprocess.h>
+#define TINYOBJLOADER_IMPLEMENTATION
+#include <tiny_obj_loader.h>
 
-#include "Vec2i.h"
 #include "Vec3f.h"
-#include "Vertex.h"
+#include "Vec4f.h"
 #include "Mat4f.h"
-#include "Camera.h"
-#include "Vertex4.h"
-#include "Polygon.h"
 
-constexpr int w = 1024;
-constexpr int h = 768;
+#include "graphics.h"
 
-void print_float_as_hex(float* a) {
-    uint32_t int_rep = *(uint32_t*)a;
-    std::cout << std::hex << std::setfill('0') << std::setw(8) << int_rep << std::endl;
-}
+struct Vertex {
+    float x, y, z;
+};
 
-std::vector<int> interpolate_x(Vec2i a, Vec2i b);
-void draw_line(Vec2i a, Vec2i b, sf::VertexArray& frame_buffer, float intensity, Vertex ta, Vertex tb, Vertex tc);
-void draw_triangle(Vertex a, Vertex b, Vertex c, sf::VertexArray& frame_buffer, float intensity, bool filled = false);
-bool draw_rotate(const aiMesh* mesh, sf::VertexArray& frame_buffer, float angle_deg);
-float get_depth_for_fragment(int coord_x, int coord_y, Vec3f ta, Vec3f tb, Vec3f tc);
-void interpolate_uv(int fragment_coord_x, int fragment_coord_y, Vertex a, Vertex b, Vertex c, float& u, float& v);
+constexpr unsigned int w = 800;
+constexpr unsigned int h = 600;
 
-void draw_mesh(const aiMesh* mesh, sf::VertexArray& frame_buffer, float angle_deg);
-bool is_backfaced(const Polygon& polygon_in_cam_space);
-void draw_line_color(Vec2i a, Vec2i b, sf::VertexArray& frame_buffer, const sf::Color& color);
-
-void draw_mesh_(const aiMesh* mesh, std::vector<sf::Uint8>& frame_buffer, const Vec3f& rotation, const Vec3f& translation);
-void draw_wireframe_triangle_(std::vector<sf::Uint8>& frame_buffer, Vertex a, Vertex b, Vertex c);
-void draw_line_dda(std::vector<sf::Uint8>& frame_buffer, int x0, int y0, int x1, int y1, sf::Color color);
-bool clip_line_coh_suth(float& x0, float& y0, float& x1, float& y1);
 void set_pixel_color(std::vector<sf::Uint8>& frame_buffer, int x, int y, sf::Color color);
-void fill_frame_buffer(std::vector<sf::Uint8>& frame_buffer, sf::Color color);
+void clear_frame_buffer(std::vector<sf::Uint8>& frame_buffer, sf::Color color);
+void clear_z_buffer(std::vector<float>& z_buffer, float value = 1.0f);
+bool perform_depth_test(std::vector<float>& z_buffer, int frag_x, int frag_y, float frag_z);
 
-void draw_filled_triangle_(std::vector<sf::Uint8>& frame_buffer, Vertex a, Vertex b, Vertex c);
+void draw_filled_triangle(std::vector<sf::Uint8>& frame_buffer, std::vector<float>& z_buffer, Vertex v0, Vertex v1, Vertex v2, sf::Color color);
+void draw_flat_bottom_filled_triangle(std::vector<sf::Uint8>& frame_buffer, std::vector<float>& z_buffer, Vertex v0, Vertex v1, Vertex v2, sf::Color color);
+void draw_flat_top_filled_triangle(std::vector<sf::Uint8>& frame_buffer, std::vector<float>& z_buffer, Vertex v0, Vertex v1, Vertex v2, sf::Color color);
 
-void draw_filled_triangle(std::vector<sf::Uint8>& frame_buffer, float x0, float y0, float x1, float y1, float x2, float y2);
-void draw_flat_bottom_filled_triangle(std::vector<sf::Uint8>& frame_buffer, float x0, float y0, float x1, float y1, float x2, float y2, sf::Color color);
-void draw_flat_top_filled_triangle(std::vector<sf::Uint8>& frame_buffer, float x0, float y0, float x1, float y1, float x2, float y2, sf::Color color);
+void test_z_buffer_1(std::vector<sf::Uint8>& frame_buffer, std::vector<float>& z_buffer);
+void draw_red_triangle_1(std::vector<sf::Uint8>& frame_buffer, std::vector<float>& z_buffer, sf::Color color = sf::Color::Red);
+void draw_blue_triangle_1(std::vector<sf::Uint8>& frame_buffer, std::vector<float>& z_buffer, sf::Color color = sf::Color::Blue);
 
-//std::random_device random_device;
-//std::mt19937 engine(random_device());
-//std::uniform_int_distribution<> distrib(0, 255);
+void test_z_buffer_2(std::vector<sf::Uint8>& frame_buffer, std::vector<float>& z_buffer);
+void draw_red_triangle_2(std::vector<sf::Uint8>& frame_buffer, std::vector<float>& z_buffer, sf::Color color = sf::Color::Red);
+void draw_blue_triangle_2(std::vector<sf::Uint8>& frame_buffer, std::vector<float>& z_buffer, sf::Color color = sf::Color::Blue);
 
-sf::RenderWindow* p_win;
-
-std::array<float, w* h> depth_buffer;
-
-sf::Image* p_image;
-
-Camera cam{
-    Vec3f(0.0f, 0.0f, 3.4142f), // У модели в GeoGebra позиция камеры выбрана не вполне удачно - не в нуле.
-    (90.0 + 0.0) * (std::numbers::pi / 180.0),
-    (90.0 + 0.0) * (std::numbers::pi / 180.0)
-};
-
-/*
-Camera cam{
-    Vec3f(0.0f, 0.0f, 2.4142f), // У модели в GeoGebra позиция камеры выбрана не вполне удачно - не в нуле.
-    (90.0 + 0.0) * (std::numbers::pi / 180.0),
-    (90.0 + 0.0) * (std::numbers::pi / 180.0)
-};
-*/
-
-/*
-Camera cam{
-    Vec3f(1.0f, 2.0f, 2.0f),
-    (90.0 + 10.0) * (std::numbers::pi / 180.0),
-    (90.0 + 45.0) * (std::numbers::pi / 180.0)
-};
-*/
-
-/*
-Camera cam{
-    Vec3f(2.0f, 0.0f, -3.0f),
-    (180.0 + 90.0) * (std::numbers::pi / 180.0),
-    (90.0) * (std::numbers::pi / 180.0)
-};
-*/
-
-/*
-Camera cam{
-    Vec3f(-6.0f, 4.0f, 2.0f),
-    106.7194 * (std::numbers::pi / 180.0),
-    109.7616 * (std::numbers::pi / 180.0)
-};
-*/
+void load_model(std::vector<Polygon>& polygons);
+void rasterize_polygons_wireframe(const std::vector<Polygon>& polygons, FrameBuffer& frame_buffer);
 
 int main() {
     sf::RenderWindow window(sf::VideoMode(w, h), "Software Renderer");
 
-    std::vector<sf::Uint8> frame_buffer(w * h * 4);
-    fill_frame_buffer(frame_buffer, sf::Color::White);
-
     sf::Texture texture;
-    if (!texture.create(w, h)) {
-        std::cout << "SFML: Create texture fail.\n";
-    }
-
+    if (!texture.create(w, h))
+        std::cout << "sfml: texture.create() failed\n";
     sf::Sprite sprite(texture);
 
-    Assimp::Importer importer;
-    //const aiScene* scene = importer.ReadFile("data/box_textured/scene.gltf",
-    //const aiScene* scene = importer.ReadFile("data/fuel_barrel/scene.gltf",
-    const aiScene* scene = importer.ReadFile("data/pony_cartoon/scene.gltf",
-        aiProcess_CalcTangentSpace
-        | aiProcess_Triangulate
-        | aiProcess_JoinIdenticalVertices
-        | aiProcess_SortByPType
-        | aiProcess_GenBoundingBoxes
-        | aiProcess_PreTransformVertices);
-    const aiAABB& aabb = scene->mMeshes[0]->mAABB;
-    if (scene == nullptr) {
-        std::cout << importer.GetErrorString() << std::endl;
-        return false;
-    }
-    const aiMesh* mesh = scene->mMeshes[0];
+    FrameBuffer frame_buffer_{ w, h, std::vector<sf::Uint8>(w * h * 4) };
+    std::vector<sf::Uint8> frame_buffer(w * h * 4);
+    std::vector<float> z_buffer(w * h);
 
-    float angle = 0.0f;
+    std::vector<Polygon> polygons;
+    load_model(polygons);
+
     while (window.isOpen()) {
         sf::Event event;
         while (window.pollEvent(event)) {
@@ -140,22 +63,12 @@ int main() {
                 window.close();
         }
 
-        fill_frame_buffer(frame_buffer, sf::Color::White);
+        clear_frame_buffer(sf::Color::Black, frame_buffer_);
+        //clear_z_buffer(z_buffer);
 
-        angle += 0.01f;
-        //draw_mesh_(mesh, frame_buffer, Vec3f::zero, Vec3f::zero);
+        rasterize_polygons_wireframe(polygons, frame_buffer_);
 
-        //draw_mesh_(mesh, frame_buffer, Vec3f(0.0f, 0.0f, 0.0f), Vec3f(-6.0f, 0.0f, 0.0f));
-        // Слегка повернули, чтобы боковые не отсеклись по backface culling.
-        //draw_mesh_(mesh, frame_buffer, Vec3f(0.0f, -0.5f, 0.0f), Vec3f(-5.0f, 0.0f, -5.5f));
-        //draw_mesh_(mesh, frame_buffer, Vec3f(0.0f, 0.5f, 0.0f), Vec3f(5.0f, 0.0f, -5.5f));
-        //draw_mesh_(mesh, frame_buffer, Vec3f(0.0f, 0.0f, 0.0f), Vec3f(0.0f, 3.0f, -5.5f));
-        draw_mesh_(mesh, frame_buffer, Vec3f(0.0f, angle * 30.0f, 0.0f), Vec3f(0.0f, -3.0f, -5.5f));
-        //draw_mesh_(mesh, frame_buffer, Vec3f(0.0f, angle * 30.0f, 0.0f), Vec3f(0.0f, std::sin(angle) * 4.5f, -6.0f));
-        //draw_mesh_(mesh, frame_buffer, Vec3f(angle * 30.0f, 0.0f, 0.0f), Vec3f(std::sin(angle) * 5.0f, -2.5f, -6.0f));
-        //draw_mesh_(mesh, frame_buffer, Vec3f(25.0f, 10.0f, 0.0f), Vec3f(std::cos(angle) * 5.0f, std::sin(angle) * 5.0f, std::cos(angle) * 2.0 - 7.0f));
-
-        texture.update(frame_buffer.data());
+        texture.update(frame_buffer_.rgba_array.data());
 
         window.clear();
         window.draw(sprite);
@@ -163,1005 +76,6 @@ int main() {
     }
 
     return 0;
-}
-
-bool draw_rotate(const aiMesh* mesh, sf::VertexArray& frame_buffer, float angle_deg) {
-    Mat4f persp_proj = Mat4f::create_perspective(45.0 * (std::numbers::pi / 180.0), w / (float)h, -10.0f, -50.0f);
-    Mat4f viewport = Mat4f::create_viewport(w, h);
-
-    //Mat4f translation = Mat4f::create_translation(Vec3f{ -8.4496f, 0.0f, -6.9425f });
-    Mat4f translation = Mat4f::create_identity();
-    Mat4f rotation_x = Mat4f::create_identity();
-    //Mat4f rotation_x = Mat4f::create_rotation_x(0 * (std::numbers::pi / 180.0));
-    //Mat4f rotation_y = Mat4f::create_rotation_y(30.0 * (std::numbers::pi / 180.0));
-    Mat4f rotation_y = Mat4f::create_identity();
-    Mat4f rotation_z = Mat4f::create_identity();
-    //Mat4f rotation_z = Mat4f::create_rotation_z(angle_deg * (std::numbers::pi / 180.0));
-
-    for (unsigned int i = 0; i != mesh->mNumFaces; i++) {
-        const aiFace& face = mesh->mFaces[i];
-        const unsigned int idx[3] = { face.mIndices[0], face.mIndices[1], face.mIndices[2] };
-        std::vector<Vertex> triangle_vertices;
-        std::vector<Vec3f> triangle_vertices_orig;
-        for (int j = 0; j != 3; j++) {
-            const aiVector3D va = mesh->mVertices[idx[j]];
-
-            Vec4f v4{ va.x, va.y, va.z };
-
-            // Сначала translation, потом rotation.
-            //Vec4f translated = translation * v4;
-            //Vec4f rotated = rotation_y * translated;
-            //Vec4f in_clip_space = persp_proj * rotated;
-
-            // Сначала rotation, потом translation.
-            Vec4f rotated = rotation_y * v4;
-            //rotated = rotation_y * rotated;
-            //rotated = rotation_z * rotated;
-            Vec4f translated = translation * rotated;
-
-            Mat4f view_mat = cam.get_view_mat();
-            Vec4f in_cam_space = view_mat * translated;
-
-            // Для корректного расчета освещенности.
-            Vec3f tranformed_orig = in_cam_space;
-            triangle_vertices_orig.push_back(Vec3f(tranformed_orig.x, tranformed_orig.y, tranformed_orig.z));
-
-            Vec4f in_clip_space = persp_proj * in_cam_space;
-            Vec4f in_ndc = in_clip_space / in_clip_space.w;
-            Vec3f in_screen = viewport * in_ndc;
-
-            aiVector3D uv = mesh->mTextureCoords[0][idx[j]];
-            float u = uv.x;
-            float v = uv.y;
-
-            Vertex vt{ in_screen, u, v };
-            triangle_vertices.push_back(vt);
-        }
-
-        //
-
-        Vec3f vector_a = triangle_vertices_orig[1] - triangle_vertices_orig[0];
-        Vec3f vector_b = triangle_vertices_orig[2] - triangle_vertices_orig[0];
-        Vec3f face_normal = Vec3f::cross(vector_a, vector_b).get_normalized();
-        //Vec3f face_normal = Vec3f::cross(vector_b, vector_a).get_normalized();
-        Vec3f light_dir = Vec3f(0.0f, 0.0f, -1.0f);
-        float intensity = Vec3f::dot(face_normal, light_dir);
-        if (intensity < 0) {
-            draw_triangle(triangle_vertices[0], triangle_vertices[1], triangle_vertices[2], frame_buffer, std::abs(intensity), true);
-        }
-    }
-
-    return true;
-}
-
-void draw_mesh_(const aiMesh* mesh, std::vector<sf::Uint8>& frame_buffer, const Vec3f& rotation, const Vec3f& translation) {
-    //Mat4f persp_proj_mat = Mat4f::create_perspective(45.0 * (std::numbers::pi / 180.0), w / (float)h, -2.0f, -8.0f);
-    Mat4f persp_proj_mat = Mat4f::create_perspective(45.0 * (std::numbers::pi / 180.0), w / (float)h, -2.0f, -10.0f);
-    Mat4f viewport_mat = Mat4f::create_viewport(w, h);
-
-    Mat4f translation_mat = Mat4f::create_translation(translation);
-    Mat4f rotation_x_mat = Mat4f::create_rotation_x(rotation.x * (std::numbers::pi / 180.0));
-    Mat4f rotation_y_mat = Mat4f::create_rotation_y(rotation.y * (std::numbers::pi / 180.0));
-    Mat4f rotation_z_mat = Mat4f::create_rotation_z(rotation.z * (std::numbers::pi / 180.0));
-
-    //const float far_clipping_plane_z = -10.0f;
-    //const float near_clipping_plane_z = -8.0f;
-
-    const float far_clipping_plane_z = -50.0f;
-    const float near_clipping_plane_z = -1.0f;
-
-    std::vector<Polygon> polygons;
-    polygons.reserve(mesh->mNumFaces);
-    for (unsigned int i = 0; i != mesh->mNumFaces; i++) {
-        const aiFace& face = mesh->mFaces[i];
-        const unsigned int indices[3] = { face.mIndices[0], face.mIndices[1], face.mIndices[2] };
-
-        Polygon polygon{};
-        for (unsigned int j = 0; j != 3; j++) {
-            const aiVector3D orig_vertex = mesh->mVertices[indices[j]];
-            const aiVector3D uv = mesh->mTextureCoords[0][indices[j]];
-
-            Vertex4 vertex{
-                Vec4f{orig_vertex.x, orig_vertex.y, orig_vertex.z},
-                uv.x,
-                uv.y
-            };
-
-            vertex.pos = rotation_x_mat * vertex.pos;
-            vertex.pos = rotation_y_mat * vertex.pos;
-            vertex.pos = rotation_z_mat * vertex.pos;
-
-            vertex.pos = translation_mat * vertex.pos;
-
-            Mat4f view_mat = cam.get_view_mat();
-            vertex.pos = view_mat * vertex.pos;
-
-            polygon.vertices[j] = vertex;
-        }
-
-        // Backface culling in camera space.
-        if (is_backfaced(polygon))
-            continue;
-
-            // Far plane culling.
-        if (polygon.vertices[0].pos.z <= far_clipping_plane_z &&
-            polygon.vertices[1].pos.z <= far_clipping_plane_z &&
-            polygon.vertices[2].pos.z <= far_clipping_plane_z)
-            continue;
-
-        // Near plane culling.
-        if (polygon.vertices[0].pos.z >= near_clipping_plane_z &&
-            polygon.vertices[1].pos.z >= near_clipping_plane_z &&
-            polygon.vertices[2].pos.z >= near_clipping_plane_z)
-            continue;
-
-        // BEGIN: Left X plane culling.
-        const float d = 1.0f / std::tanf(45.0 * (std::numbers::pi / 180.0) / 2.0f);
-        const float left_plane_k = w / (h * d); // aspect_ratio / d;
-
-        int verts_out_count = 0;
-        verts_out_count += polygon.vertices[0].pos.x <= (polygon.vertices[0].pos.z * left_plane_k);
-        verts_out_count += polygon.vertices[1].pos.x <= (polygon.vertices[1].pos.z * left_plane_k);
-        verts_out_count += polygon.vertices[2].pos.x <= (polygon.vertices[2].pos.z * left_plane_k);
-        if (verts_out_count == 3)
-            continue;
-        // END: Left X plane culling.
-
-        // BEGIN: Right X plane culling.
-        const float right_plane_k = -left_plane_k;
-
-        verts_out_count = 0;
-        verts_out_count += polygon.vertices[0].pos.x >= (polygon.vertices[0].pos.z * right_plane_k);
-        verts_out_count += polygon.vertices[1].pos.x >= (polygon.vertices[1].pos.z * right_plane_k);
-        verts_out_count += polygon.vertices[2].pos.x >= (polygon.vertices[2].pos.z * right_plane_k);
-        if (verts_out_count == 3)
-            continue;
-        // END: Right X plane culling.
-
-        // BEGIN: Top Y plane culling.
-        const float top_plane_k = -(1.0f / d); // Поскольку z-координаты вершин уже отрицательные.
-
-        verts_out_count = 0;
-        verts_out_count += polygon.vertices[0].pos.y >= (polygon.vertices[0].pos.z * top_plane_k);
-        verts_out_count += polygon.vertices[1].pos.y >= (polygon.vertices[1].pos.z * top_plane_k);
-        verts_out_count += polygon.vertices[2].pos.y >= (polygon.vertices[2].pos.z * top_plane_k);
-        if (verts_out_count == 3)
-            continue;
-        // END: Top Y plane culling.
-
-        // BEGIN: Bottom Y plane culling.
-        const float bottom_plane_k = -top_plane_k;
-
-        verts_out_count = 0;
-        verts_out_count += polygon.vertices[0].pos.y <= (polygon.vertices[0].pos.z * bottom_plane_k);
-        verts_out_count += polygon.vertices[1].pos.y <= (polygon.vertices[1].pos.z * bottom_plane_k);
-        verts_out_count += polygon.vertices[2].pos.y <= (polygon.vertices[2].pos.z * bottom_plane_k);
-        if (verts_out_count == 3)
-            continue;
-        // END: Bottom Y plane culling.
-
-        // BEGIN: Near plane clipping.
-        // NOTE: Определяем параметр t прямой, при котором точка лежит и на прямой и на ближней плоскости.
-
-        // Определяем количество вершин снаружи.
-        verts_out_count = 0;
-        verts_out_count += polygon.vertices[0].pos.z > near_clipping_plane_z;
-        verts_out_count += polygon.vertices[1].pos.z > near_clipping_plane_z;
-        verts_out_count += polygon.vertices[2].pos.z > near_clipping_plane_z;
-
-        // Простой случай: две вершины снаружи - обновляем координаты "торчащих" вершин.
-        // Куллинг мы выполнили выше, поэтому, если две вершины торчат за ближней плоскостью,
-        // значит третья вершина точно внутри.
-        if (verts_out_count == 2) {
-            // Предполагаем по умолчанию такой расклад.
-            int vert_in_index = 0;
-            int vert_out_1_index = 1;
-            int vert_out_2_index = 2;
-
-            // Если вторая вершина внутри, значит две другие - снаружи.
-            if (polygon.vertices[1].pos.z < near_clipping_plane_z) {
-                vert_in_index = 1;
-                vert_out_1_index = 0;
-                vert_out_2_index = 2;
-            }
-            // Если третья вершина внутри, значит две другие - снаружи.
-            else if (polygon.vertices[2].pos.z < near_clipping_plane_z) {
-                vert_in_index = 2;
-                vert_out_1_index = 0;
-                vert_out_2_index = 1;
-            }
-
-            // Ищем первую точку пересечения и обновляем первую внешнюю вершину.
-            const Vec3f vert_in_pos = polygon.vertices[vert_in_index].pos;
-            const Vec3f vert_out_1_pos = polygon.vertices[vert_out_1_index].pos;
-            const Vec3f from_in_to_out_1 = vert_out_1_pos - vert_in_pos;
-            float line_param_t = (near_clipping_plane_z - vert_in_pos.z) / from_in_to_out_1.z;
-            const Vec3f intersection_point_1 = vert_in_pos + from_in_to_out_1 * line_param_t;
-            polygon.vertices[vert_out_1_index].pos = intersection_point_1;
-
-            // Ищем вторую точку пересечения и обновляем вторую внешнюю вершину.
-            const Vec3f vert_out_2_pos = polygon.vertices[vert_out_2_index].pos;
-            const Vec3f from_in_to_out_2 = vert_out_2_pos - vert_in_pos;
-            line_param_t = (near_clipping_plane_z - vert_in_pos.z) / from_in_to_out_2.z;
-            const Vec3f intersection_point_2 = vert_in_pos + from_in_to_out_2 * line_param_t;
-            polygon.vertices[vert_out_2_index].pos = intersection_point_2;
-        }
-        // Случай посложней: у одного полигона обновляем одну координату
-        // и добавляем еще один полигон.
-        else if (verts_out_count == 1) {
-            // Предполагаем по умолчанию такой расклад.
-            int vert_out_index = 0;
-            int vert_in_1_index = 1;
-            int vert_in_2_index = 2;
-
-            // Если вторая вершина снаружи, значит две другие - внутри.
-            if (polygon.vertices[1].pos.z > near_clipping_plane_z) {
-                vert_out_index = 1;
-                vert_in_1_index = 0;
-                vert_in_2_index = 2;
-            }
-            // Если третья вершина снаружи, значит две другие - внутри.
-            else if (polygon.vertices[2].pos.z > near_clipping_plane_z) {
-                vert_out_index = 2;
-                vert_in_1_index = 0;
-                vert_in_2_index = 1;
-            }
-
-            // Ищем первую точку пересечения.
-            const Vec3f vert_out_pos = polygon.vertices[vert_out_index].pos;
-            const Vec3f vert_in_1_pos = polygon.vertices[vert_in_1_index].pos;
-            Vec3f from_in_to_out = vert_out_pos - vert_in_1_pos;
-            float line_param_t = (near_clipping_plane_z - vert_in_1_pos.z) / from_in_to_out.z;
-            const Vec3f intersection_point_1 = vert_in_1_pos + from_in_to_out * line_param_t;
-            polygon.vertices[vert_out_index].pos = intersection_point_1;
-
-            // Ищем вторую точку пересечения.
-            const Vec3f vert_in_2_pos = polygon.vertices[vert_in_2_index].pos;
-            from_in_to_out = vert_out_pos - vert_in_2_pos;
-            line_param_t = (near_clipping_plane_z - vert_in_2_pos.z) / from_in_to_out.z;
-            const Vec3f intersection_point_2 = vert_in_2_pos + from_in_to_out * line_param_t;
-
-            Polygon new_poly{};
-            new_poly.vertices[0] = Vertex4{ vert_in_2_pos };
-            new_poly.vertices[1] = Vertex4{ intersection_point_1 };
-            new_poly.vertices[2] = Vertex4{ intersection_point_2 };
-
-            polygons.push_back(new_poly);
-        }
-        polygons.push_back(polygon);
-        // END: Near plane clipping.
-
-        /*
-        // To clip space.
-        polygon.vertices[0].pos = persp_proj * polygon.vertices[0].pos;
-        polygon.vertices[1].pos = persp_proj * polygon.vertices[1].pos;
-        polygon.vertices[2].pos = persp_proj * polygon.vertices[2].pos;
-
-        // To ndc.
-        polygon.vertices[0].pos = polygon.vertices[0].pos / polygon.vertices[0].pos.w;
-        polygon.vertices[1].pos = polygon.vertices[1].pos / polygon.vertices[1].pos.w;
-        polygon.vertices[2].pos = polygon.vertices[2].pos / polygon.vertices[2].pos.w;
-
-        // To screen space.
-        polygon.vertices[0].pos = viewport_mat * polygon.vertices[0].pos;
-        polygon.vertices[1].pos = viewport_mat * polygon.vertices[1].pos;
-        polygon.vertices[2].pos = viewport_mat * polygon.vertices[2].pos;
-
-        Vertex v0{ polygon.vertices[0].pos, polygon.vertices[0].u, polygon.vertices[0].v };
-        Vertex v1{ polygon.vertices[1].pos, polygon.vertices[1].u, polygon.vertices[1].v };
-        Vertex v2{ polygon.vertices[2].pos, polygon.vertices[2].u, polygon.vertices[2].v };
-        draw_triangle(v0, v1, v2, frame_buffer, 1.0f, false);
-        */
-    }
-
-    // Теперь у нас есть список полигонов в пространстве камеры.
-    // Все полигоны делятся на классы:
-    // 1. Исходные полигоны модели, которые не подверглись ни клиппингу ни куллингу.
-    // 2. Усеченные полигоны модели (полигоны, две вершины которых оказались за пределами плоскости отсечения).
-    // 3. Усеченные полигоны модели + новые полигоны (одна вершина за пределами плоскости отсечения).
-    // 4. Полностью отброшенные полигоны (все вершины за пределами плоскости отсечения).
-    // 5. Полностью отброшенные полигоны (нелицевые полигоны).
-
-    for (Polygon& polygon : polygons) {
-        // To clip space.
-        polygon.vertices[0].pos = persp_proj_mat * polygon.vertices[0].pos;
-        polygon.vertices[1].pos = persp_proj_mat * polygon.vertices[1].pos;
-        polygon.vertices[2].pos = persp_proj_mat * polygon.vertices[2].pos;
-
-        // To ndc.
-        polygon.vertices[0].pos = polygon.vertices[0].pos / polygon.vertices[0].pos.w;
-        polygon.vertices[1].pos = polygon.vertices[1].pos / polygon.vertices[1].pos.w;
-        polygon.vertices[2].pos = polygon.vertices[2].pos / polygon.vertices[2].pos.w;
-
-        // To screen space.
-        polygon.vertices[0].pos = viewport_mat * polygon.vertices[0].pos;
-        polygon.vertices[1].pos = viewport_mat * polygon.vertices[1].pos;
-        polygon.vertices[2].pos = viewport_mat * polygon.vertices[2].pos;
-
-        Vertex v0{ polygon.vertices[0].pos, polygon.vertices[0].u, polygon.vertices[0].v };
-        Vertex v1{ polygon.vertices[1].pos, polygon.vertices[1].u, polygon.vertices[1].v };
-        Vertex v2{ polygon.vertices[2].pos, polygon.vertices[2].u, polygon.vertices[2].v };
-
-        //draw_wireframe_triangle_(frame_buffer, v0, v1, v2);
-        draw_filled_triangle_(frame_buffer, v0, v1, v2);
-    }
-}
-
-void draw_mesh(const aiMesh* mesh, sf::VertexArray& frame_buffer, float angle_deg) {
-    Mat4f persp_proj = Mat4f::create_perspective(45.0 * (std::numbers::pi / 180.0), w / (float)h, -10.0f, -50.0f);
-    Mat4f viewport_mat = Mat4f::create_viewport(w, h);
-
-    Mat4f translation = Mat4f::create_identity();
-    Mat4f rotation_x = Mat4f::create_identity();
-    //Mat4f rotation_x = Mat4f::create_rotation_x(15.0 * (std::numbers::pi / 180.0));
-    //Mat4f rotation_x = Mat4f::create_rotation_x(angle_deg * (std::numbers::pi / 180.0));
-    Mat4f rotation_y = Mat4f::create_identity();
-    //Mat4f rotation_y = Mat4f::create_rotation_y(15.0 * (std::numbers::pi / 180.0));
-    //Mat4f rotation_y = Mat4f::create_rotation_y(angle_deg * (std::numbers::pi / 180.0));
-    Mat4f rotation_z = Mat4f::create_identity();
-
-    const float far_clipping_plane_z = -50.0f;
-    const float near_clipping_plane_z = -10.0f;
-
-    std::vector<Polygon> polygons;
-    polygons.reserve(mesh->mNumFaces);
-    for (unsigned int i = 0; i != mesh->mNumFaces; i++) {
-        const aiFace& face = mesh->mFaces[i];
-        const unsigned int indices[3] = { face.mIndices[0], face.mIndices[1], face.mIndices[2] };
-
-        Polygon polygon{};
-        for (unsigned int j = 0; j != 3; j++) {
-            const aiVector3D orig_vertex = mesh->mVertices[indices[j]];
-            const aiVector3D uv = mesh->mTextureCoords[0][indices[j]];
-
-            Vertex4 vertex{
-                Vec4f{orig_vertex.x, orig_vertex.y, orig_vertex.z},
-                uv.x,
-                uv.y
-            };
-
-            vertex.pos = rotation_x * vertex.pos;
-            vertex.pos = rotation_y * vertex.pos;
-            vertex.pos = rotation_z * vertex.pos;
-
-            vertex.pos = translation * vertex.pos;
-
-            Mat4f view_mat = cam.get_view_mat();
-            vertex.pos = view_mat * vertex.pos;
-
-            polygon.vertices[j] = vertex;
-        }
-
-        // Backface culling in camera space.
-        /*if (is_backfaced(polygon))
-            continue;*/
-
-            // Far plane culling.
-        if (polygon.vertices[0].pos.z <= far_clipping_plane_z &&
-            polygon.vertices[1].pos.z <= far_clipping_plane_z &&
-            polygon.vertices[2].pos.z <= far_clipping_plane_z)
-            continue;
-
-        // Near plane culling.
-        if (polygon.vertices[0].pos.z >= near_clipping_plane_z &&
-            polygon.vertices[1].pos.z >= near_clipping_plane_z &&
-            polygon.vertices[2].pos.z >= near_clipping_plane_z)
-            continue;
-
-        // X planes culling.
-        // Y planes culling.
-
-        // BEGIN: Near plane clipping.
-        // NOTE: Определяем параметр t прямой, при котором точка лежит и на прямой и на ближней плоскости.
-
-        // Определяем количество вершин снаружи.
-        int verts_out_count = 0;
-        verts_out_count += polygon.vertices[0].pos.z > near_clipping_plane_z;
-        verts_out_count += polygon.vertices[1].pos.z > near_clipping_plane_z;
-        verts_out_count += polygon.vertices[2].pos.z > near_clipping_plane_z;
-
-        // Простой случай: две вершины снаружи - обновляем координаты "торчащих" вершин.
-        // Куллинг мы выполнили выше, поэтому, если две вершины торчат за ближней плоскостью,
-        // значит третья вершина точно внутри.
-        if (verts_out_count == 2) {
-            // Предполагаем по умолчанию такой расклад.
-            int vert_in_index = 0;
-            int vert_out_1_index = 1;
-            int vert_out_2_index = 2;
-
-            // Если вторая вершина внутри, значит две другие - снаружи.
-            if (polygon.vertices[1].pos.z < near_clipping_plane_z) {
-                vert_in_index = 1;
-                vert_out_1_index = 0;
-                vert_out_2_index = 2;
-            }
-            // Если третья вершина внутри, значит две другие - снаружи.
-            else if (polygon.vertices[2].pos.z < near_clipping_plane_z) {
-                vert_in_index = 2;
-                vert_out_1_index = 0;
-                vert_out_2_index = 1;
-            }
-
-            // Ищем первую точку пересечения и обновляем первую внешнюю вершину.
-            const Vec3f vert_in_pos = polygon.vertices[vert_in_index].pos;
-            const Vec3f vert_out_1_pos = polygon.vertices[vert_out_1_index].pos;
-            const Vec3f from_in_to_out_1 = vert_out_1_pos - vert_in_pos;
-            float line_param_t = (near_clipping_plane_z - vert_in_pos.z) / from_in_to_out_1.z;
-            const Vec3f intersection_point_1 = vert_in_pos + from_in_to_out_1 * line_param_t;
-            polygon.vertices[vert_out_1_index].pos = intersection_point_1;
-
-            // Ищем вторую точку пересечения и обновляем вторую внешнюю вершину.
-            const Vec3f vert_out_2_pos = polygon.vertices[vert_out_2_index].pos;
-            const Vec3f from_in_to_out_2 = vert_out_2_pos - vert_in_pos;
-            line_param_t = (near_clipping_plane_z - vert_in_pos.z) / from_in_to_out_2.z;
-            const Vec3f intersection_point_2 = vert_in_pos + from_in_to_out_2 * line_param_t;
-            polygon.vertices[vert_out_2_index].pos = intersection_point_2;
-        }
-        // Случай посложней: у одного полигона обновляем одну координату
-        // и добавляем еще один полигон.
-        else if (verts_out_count == 1) {
-            // Предполагаем по умолчанию такой расклад.
-            int vert_out_index = 0;
-            int vert_in_1_index = 1;
-            int vert_in_2_index = 2;
-
-            // Если вторая вершина снаружи, значит две другие - внутри.
-            if (polygon.vertices[1].pos.z > near_clipping_plane_z) {
-                vert_out_index = 1;
-                vert_in_1_index = 0;
-                vert_in_2_index = 2;
-            }
-            // Если третья вершина снаружи, значит две другие - внутри.
-            else if (polygon.vertices[2].pos.z > near_clipping_plane_z) {
-                vert_out_index = 2;
-                vert_in_1_index = 0;
-                vert_in_2_index = 1;
-            }
-
-            // Ищем первую точку пересечения.
-            const Vec3f vert_out_pos = polygon.vertices[vert_out_index].pos;
-            const Vec3f vert_in_1_pos = polygon.vertices[vert_in_1_index].pos;
-            Vec3f from_in_to_out = vert_out_pos - vert_in_1_pos;
-            float line_param_t = (near_clipping_plane_z - vert_in_1_pos.z) / from_in_to_out.z;
-            const Vec3f intersection_point_1 = vert_in_1_pos + from_in_to_out * line_param_t;
-            polygon.vertices[vert_out_index].pos = intersection_point_1;
-
-            // Ищем вторую точку пересечения.
-            const Vec3f vert_in_2_pos = polygon.vertices[vert_in_2_index].pos;
-            from_in_to_out = vert_out_pos - vert_in_2_pos;
-            line_param_t = (near_clipping_plane_z - vert_in_2_pos.z) / from_in_to_out.z;
-            const Vec3f intersection_point_2 = vert_in_2_pos + from_in_to_out * line_param_t;
-
-            Polygon new_poly{};
-            new_poly.vertices[0] = Vertex4{ vert_in_2_pos };
-            new_poly.vertices[1] = Vertex4{ intersection_point_1 };
-            new_poly.vertices[2] = Vertex4{ intersection_point_2 };
-
-            polygons.push_back(new_poly);
-        }
-        polygons.push_back(polygon);
-        // END: Near plane clipping.
-
-        /*
-        // To clip space.
-        polygon.vertices[0].pos = persp_proj * polygon.vertices[0].pos;
-        polygon.vertices[1].pos = persp_proj * polygon.vertices[1].pos;
-        polygon.vertices[2].pos = persp_proj * polygon.vertices[2].pos;
-
-        // To ndc.
-        polygon.vertices[0].pos = polygon.vertices[0].pos / polygon.vertices[0].pos.w;
-        polygon.vertices[1].pos = polygon.vertices[1].pos / polygon.vertices[1].pos.w;
-        polygon.vertices[2].pos = polygon.vertices[2].pos / polygon.vertices[2].pos.w;
-
-        // To screen space.
-        polygon.vertices[0].pos = viewport_mat * polygon.vertices[0].pos;
-        polygon.vertices[1].pos = viewport_mat * polygon.vertices[1].pos;
-        polygon.vertices[2].pos = viewport_mat * polygon.vertices[2].pos;
-
-        Vertex v0{ polygon.vertices[0].pos, polygon.vertices[0].u, polygon.vertices[0].v };
-        Vertex v1{ polygon.vertices[1].pos, polygon.vertices[1].u, polygon.vertices[1].v };
-        Vertex v2{ polygon.vertices[2].pos, polygon.vertices[2].u, polygon.vertices[2].v };
-        draw_triangle(v0, v1, v2, frame_buffer, 1.0f, false);
-        */
-    }
-
-    // Теперь у нас есть список полигонов в пространстве камеры.
-    // Все полигоны делятся на классы:
-    // 1. Исходные полигоны модели, которые не подверглись ни клиппингу ни куллингу.
-    // 2. Усеченные полигоны модели (полигоны, две вершины которых оказались за пределами плоскости отсечения).
-    // 3. Усеченные полигоны модели + новые полигоны (одна вершина за пределами плоскости отсечения).
-    // 4. Полностью отброшенные полигоны (все вершины за пределами плоскости отсечения).
-    // 5. Полностью отброшенные полигоны (нелицевые полигоны).
-
-    for (Polygon& polygon : polygons) {
-        // To clip space.
-        polygon.vertices[0].pos = persp_proj * polygon.vertices[0].pos;
-        polygon.vertices[1].pos = persp_proj * polygon.vertices[1].pos;
-        polygon.vertices[2].pos = persp_proj * polygon.vertices[2].pos;
-
-        // To ndc.
-        polygon.vertices[0].pos = polygon.vertices[0].pos / polygon.vertices[0].pos.w;
-        polygon.vertices[1].pos = polygon.vertices[1].pos / polygon.vertices[1].pos.w;
-        polygon.vertices[2].pos = polygon.vertices[2].pos / polygon.vertices[2].pos.w;
-
-        // To screen space.
-        polygon.vertices[0].pos = viewport_mat * polygon.vertices[0].pos;
-        polygon.vertices[1].pos = viewport_mat * polygon.vertices[1].pos;
-        polygon.vertices[2].pos = viewport_mat * polygon.vertices[2].pos;
-
-        Vertex v0{ polygon.vertices[0].pos, polygon.vertices[0].u, polygon.vertices[0].v };
-        Vertex v1{ polygon.vertices[1].pos, polygon.vertices[1].u, polygon.vertices[1].v };
-        Vertex v2{ polygon.vertices[2].pos, polygon.vertices[2].u, polygon.vertices[2].v };
-        draw_triangle(v0, v1, v2, frame_buffer, 1.0f, false);
-    }
-}
-
-bool is_backfaced(const Polygon& polygon_in_cam_space) {
-    Vec3f v0 = polygon_in_cam_space.vertices[0].pos;
-    Vec3f v1 = polygon_in_cam_space.vertices[1].pos;
-    Vec3f v2 = polygon_in_cam_space.vertices[2].pos;
-
-    Vec3f a = v1 - v0;
-    Vec3f b = v2 - v0;
-
-    Vec3f normal = Vec3f::cross(a, b);
-    Vec3f view{ 0.0f, 0.0f, 1.0f };
-
-    // TODO: Решить, что делать, когда результат близок к нулю,
-    // но тем не менее все еще больше эпсилон.
-    float proj = Vec3f::dot(normal, view);
-    //print_float_as_hex(&proj);
-
-    return  proj <= 0.0f;
-}
-
-std::vector<int> interpolate_x(Vec2i a, Vec2i b) {
-    std::vector<int> x_coords;
-
-    if (a.y == b.y)
-        return x_coords;
-
-    const int total_height = b.y - a.y;
-    for (int y = a.y; y <= b.y; y++)
-    {
-        float y_way_percent = (y - a.y) / (float)total_height;
-        //std::cout << "y_way_percent: " << y_way_percent << std::endl;
-        const int x = a.x + (b.x - a.x) * y_way_percent;
-        x_coords.push_back(x);
-        //std::cout << "X~~: " << x << std::endl;
-    }
-
-    // TODO: Посмотреть, как повлияет на производительность std::move().
-    return x_coords;
-}
-
-void draw_line_color(Vec2i a, Vec2i b, sf::VertexArray& frame_buffer, const sf::Color& color) {
-    if (a.x == b.x && a.y == b.y) {
-        //std::cout << std::format("Line drawing from [{},{}] to [{},{}]\n", a.x, a.y, b.x, b.y);
-
-        sf::Vector2f pos(a.x, a.y);
-        int index = w * a.y + a.x; // Раскладываем строки буфера в горизонтальную линию.
-
-        pos.y = h - pos.y;
-        frame_buffer[index].position = pos;
-        frame_buffer[index].color = color;
-
-        //p_win->draw(frame_buffer);
-        //p_win->display();
-        //std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        return;
-    }
-
-    bool swapped = false;
-    if (std::abs(a.x - b.x) < std::abs(a.y - b.y)) {
-        std::swap(a.x, a.y);
-        std::swap(b.x, b.y);
-        swapped = true;
-    }
-
-    if (a.x > b.x) {
-        std::swap(a.x, b.x);
-        std::swap(a.y, b.y);
-    }
-
-    /*if (swapped)
-        std::cout << std::format("Line drawing from [{},{}] to [{},{}]\n", a.y, a.x, b.y, b.x);
-    else
-        std::cout << std::format("Line drawing from [{},{}] to [{},{}]\n", a.x, a.y, b.x, b.y);*/
-
-    for (int x = a.x; x <= b.x; x++) {
-        float x_way_percent = (x - a.x) / (float)(b.x - a.x);
-        int y = (b.y - a.y) * x_way_percent + a.y;
-
-        sf::Vector2f pos(x, y);
-        int index = w * y + x; // Раскладываем строки буфера в горизонтальную линию.
-
-        if (swapped)
-        {
-            pos.x = y;
-            pos.y = x;
-
-            index = w * x + y; // Был своп координат. Меняем, чтобы не перепутать строки со столбцами.
-        }
-
-        pos.y = h - pos.y; // В виртуальной СК начало координат в левом нижнем углу, а в мировой - в левом верхнем.
-        frame_buffer[index].position = pos;
-        frame_buffer[index].color = color;
-
-        //p_win->draw(frame_buffer);
-        //p_win->display();
-        //std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    }
-}
-
-void draw_line(Vec2i a, Vec2i b, sf::VertexArray& frame_buffer, float intensity, Vertex ta, Vertex tb, Vertex tc) {
-    if (a.x == b.x && a.y == b.y) {
-        //std::cout << std::format("Line drawing from [{},{}] to [{},{}]\n", a.x, a.y, b.x, b.y);
-
-        sf::Vector2f pos(a.x, a.y);
-        int index = w * a.y + a.x; // Раскладываем строки буфера в горизонтальную линию.
-
-        int source_fragment_coord_x = a.x;
-        int source_fragment_coord_y = a.y;
-        float source_fragment_depth = get_depth_for_fragment(source_fragment_coord_x, source_fragment_coord_y, ta.pos, tb.pos, tc.pos);
-        float target_fragment_depth = depth_buffer.at(index);
-        if (source_fragment_depth > target_fragment_depth) {
-            float u;
-            float v;
-            interpolate_uv(source_fragment_coord_x, source_fragment_coord_y, ta, tb, tc, u, v);
-            int tex_width = p_image->getSize().x;
-            int tex_height = p_image->getSize().y;
-
-            int tex_u = static_cast<int>(u * (tex_width - 1));
-            int tex_v = static_cast<int>((1.0f - v) * (tex_height - 1));
-            if (tex_v < 0) tex_v = 0; // FIXME: Выяснить.
-            if (tex_v > tex_height - 1) tex_v = tex_height - 1; // FIXME: Выяснить.
-
-            sf::Color tex_color = p_image->getPixel(tex_u, tex_v);
-            tex_color = sf::Color(tex_color.r * intensity, tex_color.g * intensity, tex_color.b * intensity);
-
-            pos.y = h - pos.y;
-            frame_buffer[index].position = pos;
-            frame_buffer[index].color = tex_color;
-            depth_buffer[index] = source_fragment_depth;
-        }
-
-        //p_win->draw(frame_buffer);
-        //p_win->display();
-        //std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        return;
-    }
-
-    bool swapped = false;
-    if (std::abs(a.x - b.x) < std::abs(a.y - b.y)) {
-        std::swap(a.x, a.y);
-        std::swap(b.x, b.y);
-        swapped = true;
-    }
-
-    if (a.x > b.x) {
-        std::swap(a.x, b.x);
-        std::swap(a.y, b.y);
-    }
-
-    /*if (swapped)
-        std::cout << std::format("Line drawing from [{},{}] to [{},{}]\n", a.y, a.x, b.y, b.x);
-    else
-        std::cout << std::format("Line drawing from [{},{}] to [{},{}]\n", a.x, a.y, b.x, b.y);*/
-
-    for (int x = a.x; x <= b.x; x++) {
-        float x_way_percent = (x - a.x) / (float)(b.x - a.x);
-        int y = (b.y - a.y) * x_way_percent + a.y;
-
-        sf::Vector2f pos(x, y);
-        int index = w * y + x; // Раскладываем строки буфера в горизонтальную линию.
-
-        if (swapped) {
-            pos.x = y;
-            pos.y = x;
-
-            index = w * x + y; // Был своп координат. Меняем, чтобы не перепутать строки со столбцами.
-        }
-
-        int source_fragment_coord_x = x;
-        int source_fragment_coord_y = y;
-        float source_fragment_depth = get_depth_for_fragment(source_fragment_coord_x, source_fragment_coord_y, ta.pos, tb.pos, tc.pos);
-        float target_fragment_depth = depth_buffer.at(index);
-        if (source_fragment_depth > target_fragment_depth) {
-            float u;
-            float v;
-            interpolate_uv(source_fragment_coord_x, source_fragment_coord_y, ta, tb, tc, u, v);
-            int tex_width = p_image->getSize().x;
-            int tex_height = p_image->getSize().y;
-            int tex_u = static_cast<int>(u * (tex_width - 1));
-            int tex_v = static_cast<int>((1.0f - v) * (tex_height - 1));
-            if (tex_v < 0) tex_v = 0; // FIXME: Выяснить.
-            if (tex_v > tex_height - 1) tex_v = tex_height - 1; // FIXME: Выяснить.
-            //if (tex_v > tex_width)
-                //tex_v = tex_width-1;
-
-            //std::cout << std::format("tex_u: {}, tex_v: {}\n", tex_u, tex_v);
-
-            sf::Color tex_color = p_image->getPixel(tex_u, tex_v);
-            tex_color = sf::Color(tex_color.r * intensity, tex_color.g * intensity, tex_color.b * intensity);
-
-            pos.y = h - pos.y;
-            frame_buffer[index].position = pos;
-            frame_buffer[index].color = tex_color;
-            //frame_buffer[index].color = color;
-            depth_buffer[index] = source_fragment_depth;
-        }
-
-        //p_win->draw(frame_buffer);
-        //p_win->display();
-        //std::this_thread::sleep_for(std::chrono::milliseconds(1));
-    }
-}
-
-float get_depth_for_fragment(int coord_x, int coord_y, Vec3f ta, Vec3f tb, Vec3f tc) {
-    /*coord_x = 752;
-    coord_y = 1280;
-
-    ta.x = 400;
-    ta.y = 212;
-    ta.z = 0;
-
-    tb.x = 2408;
-    tb.y = 2000;
-    tb.z = 0;
-
-    tc.x = 400;
-    tc.y = 2000;
-    tc.z = 1.69f;*/
-
-    float total_area = ((tc.x - ta.x) * (tb.y - ta.y) - (tb.x - ta.x) * (tc.y - ta.y)) / 2;
-    float a_u = ((tc.x - ta.x) * (coord_y - ta.y) - (tc.y - ta.y) * (coord_x - ta.x)) / 2;
-    float a_v = ((coord_x - ta.x) * (tb.y - ta.y) - (coord_y - ta.y) * (tb.x - ta.x)) / 2;
-
-    float u = a_u / total_area;
-    float v = a_v / total_area;
-    float w = 1 - u - v;
-
-    return w * ta.z + u * tb.z + v * tc.z;
-}
-
-void interpolate_uv(int fragment_coord_x, int fragment_coord_y, Vertex a, Vertex b, Vertex c, float& u, float& v) {
-    float total_area = ((c.pos.x - a.pos.x) * (b.pos.y - a.pos.y) - (b.pos.x - a.pos.x) * (c.pos.y - a.pos.y)) / 2;
-    float a_u = ((c.pos.x - a.pos.x) * (fragment_coord_y - a.pos.y) - (c.pos.y - a.pos.y) * (fragment_coord_x - a.pos.x)) / 2;
-    float a_v = ((fragment_coord_x - a.pos.x) * (b.pos.y - a.pos.y) - (fragment_coord_y - a.pos.y) * (b.pos.x - a.pos.x)) / 2;
-
-    // TODO: Разобраться с барицентрическими координатами. Разобраться со знаками площадей.
-    total_area = std::abs(total_area);
-    a_u = std::abs(a_u);
-    a_v = std::abs(a_v);
-
-    float _u = a_u / total_area;
-    float _v = a_v / total_area;
-    float w = 1 - _u - _v;
-
-    u = w * a.u + _u * b.u + _v * c.u;
-    v = w * a.v + _u * b.v + _v * c.v;
-
-    // FIXME: В некоторых случаях площадь a_v оказывается больше площади total_area из-за чего получается отрицательный знак.
-    // Более того, u,v оказываются больше единицы.
-    u = std::abs(u);
-    v = std::abs(v);
-    if (u > 1)
-        u = 1;
-    if (v > 1)
-        v = 1;
-}
-
-void draw_triangle(Vertex a, Vertex b, Vertex c, sf::VertexArray& frame_buffer, float intensity, bool filled) {
-    if (!filled) {
-        draw_line_color(Vec2i(a.pos.x, a.pos.y), Vec2i(b.pos.x, b.pos.y), frame_buffer, sf::Color::Black);
-        draw_line_color(Vec2i(b.pos.x, b.pos.y), Vec2i(c.pos.x, c.pos.y), frame_buffer, sf::Color::Black);
-        draw_line_color(Vec2i(c.pos.x, c.pos.y), Vec2i(a.pos.x, a.pos.y), frame_buffer, sf::Color::Black);
-        return;
-    }
-
-    // a=min(a.y,b.y,c.y).
-    // c=max(a.y,b.y,c.y).
-    if (a.pos.y > b.pos.y) std::swap(a, b);
-    if (a.pos.y > c.pos.y) std::swap(a, c);
-    if (b.pos.y > c.pos.y) std::swap(b, c);
-
-    // Координаты x сторон треугольника.
-    const std::vector<int> x_coords_ac = interpolate_x(Vec2i(a.pos.x, a.pos.y), Vec2i(c.pos.x, c.pos.y));
-    //std::cout << "count(ac): " << x_coords_ac.size() << std::endl;
-
-    // Если треугольник выродился в горизонтальную линию.
-    if (x_coords_ac.empty()) {
-        //std::cout << std::format("smth wrong with a[{},{}], b[{},{}], c[{},{}]", a.x, a.y, b.x, b.y, c.x, c.y) << std::endl;
-        return;
-    }
-
-    // Последний элемент ab равен первому элементу bc - удаляем его,
-    // чтобы размеры ac и ab+bc были равны.
-    std::vector<int> x_coords_ab = interpolate_x(Vec2i(a.pos.x, a.pos.y), Vec2i(b.pos.x, b.pos.y));
-    const std::vector<int> x_coords_bc = interpolate_x(Vec2i(b.pos.x, b.pos.y), Vec2i(c.pos.x, c.pos.y));
-
-    // Если ни одна линия не горизонтальная, то обе дают иксы, причем конец ab дублируется в начале bc.
-    // В противном случае один из массивов будет пустым, а второй будет целиком формировать иксы.
-    if (!x_coords_ab.empty() && !x_coords_bc.empty())
-        x_coords_ab.pop_back();
-
-    std::vector<int> x_coords_abc = x_coords_ab; // TODO: std::move().
-    x_coords_abc.insert(x_coords_abc.end(), x_coords_bc.begin(), x_coords_bc.end());
-
-    for (const auto& x : x_coords_abc) {
-        //std::cout << x << std::endl;
-    }
-
-    int triangle_height = c.pos.y - a.pos.y;
-    //std::cout << triangle_height << std::endl;
-
-    for (int i = 0; i < triangle_height + 1; i++) {
-        const int x_1 = x_coords_ac[i];
-        const int x_2 = x_coords_abc[i];
-        Vec2i p1(x_1, i + a.pos.y);
-        Vec2i p2(x_2, i + a.pos.y);
-
-        draw_line(p1, p2, frame_buffer, intensity, a, b, c);
-    }
-}
-
-void draw_wireframe_triangle_(std::vector<sf::Uint8>& frame_buffer, Vertex a, Vertex b, Vertex c) {
-    Vertex a_copy = a;
-    Vertex b_copy = b;
-    Vertex c_copy = c;
-
-    if (clip_line_coh_suth(a_copy.pos.x, a_copy.pos.y, b_copy.pos.x, b_copy.pos.y))
-        draw_line_dda(frame_buffer, std::round(a_copy.pos.x), std::round(a_copy.pos.y), std::round(b_copy.pos.x), std::round(b_copy.pos.y), sf::Color::Black);
-
-    b_copy = b;
-    if (clip_line_coh_suth(b_copy.pos.x, b_copy.pos.y, c_copy.pos.x, c_copy.pos.y))
-        draw_line_dda(frame_buffer, std::round(b_copy.pos.x), std::round(b_copy.pos.y), std::round(c_copy.pos.x), std::round(c_copy.pos.y), sf::Color::Black);
-
-    c_copy = c;
-    a_copy = a;
-    if (clip_line_coh_suth(c_copy.pos.x, c_copy.pos.y, a_copy.pos.x, a_copy.pos.y))
-        draw_line_dda(frame_buffer, std::round(c_copy.pos.x), std::round(c_copy.pos.y), std::round(a_copy.pos.x), std::round(a_copy.pos.y), sf::Color::Black);
-}
-
-void draw_line_dda(std::vector<sf::Uint8>& frame_buffer, int x0, int y0, int x1, int y1, sf::Color color) {
-    // Vertical.
-    if (x0 == x1) {
-        // Make ascending.
-        if (y0 > y1) {
-            std::swap(y0, y1);
-            std::swap(x0, x1);
-        }
-
-        for (int y = y0; y <= y1; y++) {
-            set_pixel_color(frame_buffer, x0, y, color);
-        }
-    }
-    // Horizontal.
-    else if (y0 == y1) {
-        // Make ascending.
-        if (x0 > x1) {
-            std::swap(x0, x1);
-        }
-
-        for (int x = x0; x <= x1; x++) {
-            set_pixel_color(frame_buffer, x, y0, color);
-        }
-    }
-
-    int dy = y1 - y0;
-    int dx = x1 - x0;
-
-    // Non-steep.
-    if (std::abs(dy) <= std::abs(dx)) {
-        // Make ascending.
-        if (x0 > x1) {
-            std::swap(x0, x1);
-            std::swap(y0, y1);
-            dx = -dx;
-            dy = -dy;
-        }
-
-        const float slope = static_cast<float>(dy) / dx;
-
-        float y_accum = y0;
-        for (int x = x0; x <= x1; x++) {
-            set_pixel_color(frame_buffer, x, std::round(y_accum), color);
-            y_accum += slope;
-        }
-    }
-    // Steep.
-    else {
-        // Make ascending.
-        if (y0 > y1) {
-            std::swap(y0, y1);
-            std::swap(x0, x1);
-            dy = -dy;
-            dx = -dx;
-        }
-
-        const float inv_slope = static_cast<float>(dx) / dy;
-
-        float x_accum = x0;
-        for (int y = y0; y <= y1; y++) {
-            set_pixel_color(frame_buffer, std::round(x_accum), y, color);
-            x_accum += inv_slope;
-        }
-    }
-}
-
-bool clip_line_coh_suth(float& x0, float& y0, float& x1, float& y1) {
-    enum EdgeBit {
-        left = 3,
-        right = 2,
-        top = 1,
-        bottom = 0
-    };
-
-    struct Point {
-        float& x;
-        float& y;
-        std::bitset<4> region_code;
-    };
-
-    Point p1{ x1, y1 };
-    p1.region_code.set(EdgeBit::left, p1.x < 0);
-    p1.region_code.set(EdgeBit::right, p1.x > w - 1);
-    p1.region_code.set(EdgeBit::top, p1.y < 0);
-    p1.region_code.set(EdgeBit::bottom, p1.y > h - 1);
-
-    Point p0{ x0, y0 };
-    p0.region_code.set(EdgeBit::left, p0.x < 0);
-    p0.region_code.set(EdgeBit::right, p0.x > w - 1);
-    p0.region_code.set(EdgeBit::top, p0.y < 0);
-    p0.region_code.set(EdgeBit::bottom, p0.y > h - 1);
-
-    bool line_inside = (p0.region_code | p1.region_code).none();
-    bool line_outside = (p0.region_code & p1.region_code).any();
-    while (!line_inside && !line_outside) {
-        // Make sure the first point is the one that is outside.
-        if (p0.region_code.none()) {
-            std::swap(p0.x, p1.x);
-            std::swap(p0.y, p1.y);
-            std::swap(p0.region_code, p1.region_code);
-        }
-
-        // Find the first edge outside of which the point is.
-        EdgeBit first_edge;
-        for (int i = EdgeBit::left; i >= EdgeBit::bottom; i--) {
-            if (p0.region_code[i]) {
-                first_edge = static_cast<EdgeBit>(i);
-                break;
-            }
-        }
-
-        if (first_edge == EdgeBit::left || first_edge == EdgeBit::right) {
-            float edge_x = first_edge == EdgeBit::left ? 0 : w - 1;
-            float slope = (p1.y - p0.y) / (p1.x - p0.x);
-
-            float x_excess = edge_x - p0.x;
-            p0.x = edge_x;
-            p0.y += x_excess * slope;
-        }
-        else {
-            float edge_y = first_edge == EdgeBit::top ? 0 : h - 1;
-            float inv_slope = (p1.x - p0.x) / (p1.y - p0.y);
-
-            float y_excess = edge_y - p0.y;
-            p0.y = edge_y;
-            p0.x += y_excess * inv_slope;
-        }
-
-        p0.region_code.set(EdgeBit::left, p0.x < 0);
-        p0.region_code.set(EdgeBit::right, p0.x > w - 1);
-        p0.region_code.set(EdgeBit::top, p0.y < 0);
-        p0.region_code.set(EdgeBit::bottom, p0.y > h - 1);
-
-        line_inside = (p0.region_code | p1.region_code).none();
-        line_outside = (p0.region_code & p1.region_code).any();
-    }
-
-    return line_inside ? true : false;
 }
 
 void set_pixel_color(std::vector<sf::Uint8>& frame_buffer, int x, int y, sf::Color color) {
@@ -1173,108 +87,299 @@ void set_pixel_color(std::vector<sf::Uint8>& frame_buffer, int x, int y, sf::Col
     frame_buffer[index + 3] = color.a;
 }
 
-void fill_frame_buffer(std::vector<sf::Uint8>& frame_buffer, sf::Color color) {
-    for (int i = 0; i < w * h; i++) {
-        const int x = i % w;
-        const int y = i / w;
-        set_pixel_color(frame_buffer, x, y, color);
+void clear_z_buffer(std::vector<float>& z_buffer, float value) {
+    std::ranges::fill(z_buffer, 1.0f);
+}
+
+bool perform_depth_test(std::vector<float>& z_buffer, int frag_x, int frag_y, float frag_z) {
+    const int index = w * frag_y + frag_x;
+    if (frag_z < z_buffer[index]) {
+        z_buffer[index] = frag_z;
+        return true;
+    }
+
+    return false;
+}
+
+void test_z_buffer_1(std::vector<sf::Uint8>& frame_buffer, std::vector<float>& z_buffer) {
+    draw_red_triangle_1(frame_buffer, z_buffer);
+    draw_blue_triangle_1(frame_buffer, z_buffer);
+}
+
+void draw_red_triangle_1(std::vector<sf::Uint8>& frame_buffer, std::vector<float>& z_buffer, sf::Color color) {
+    Vec4f v0_pos_world{ 0.12858511992886f, 0.09014727201472f, -3.062135394734f };
+    Vec4f v1_pos_world{ 0.0f, 0.1f, -4.0f };
+    Vec4f v2_pos_world{ -0.0017940119725222f, -0.013699806553022f, -6.567130320242f };
+
+    const Mat4f proj = Mat4f::create_perspective(
+        static_cast<float>(45.0 * (std::numbers::pi / 180.0)), static_cast<float>(w) / h, 0.1f, 10.0f);
+
+    Vec4f v0_pos_clip = proj * v0_pos_world;
+    Vec4f v1_pos_clip = proj * v1_pos_world;
+    Vec4f v2_pos_clip = proj * v2_pos_world;
+
+    Vec4f v0_pos_ndc = v0_pos_clip / v0_pos_clip.w;
+    Vec4f v1_pos_ndc = v1_pos_clip / v1_pos_clip.w;
+    Vec4f v2_pos_ndc = v2_pos_clip / v2_pos_clip.w;
+
+    const Mat4f viewport = Mat4f::create_viewport(w, h);
+    Vec4f v0_pos_screen = viewport * v0_pos_ndc;
+    Vec4f v1_pos_screen = viewport * v1_pos_ndc;
+    Vec4f v2_pos_screen = viewport * v2_pos_ndc;
+
+    Vertex v0{ v0_pos_screen.x, v0_pos_screen.y, v0_pos_screen.z };
+    Vertex v1{ v1_pos_screen.x, v1_pos_screen.y, v1_pos_screen.z };
+    Vertex v2{ v2_pos_screen.x, v2_pos_screen.y, v2_pos_screen.z };
+
+    draw_filled_triangle(frame_buffer, z_buffer, v0, v1, v2, color);
+}
+
+void draw_blue_triangle_1(std::vector<sf::Uint8>& frame_buffer, std::vector<float>& z_buffer, sf::Color color) {
+    Vec4f v0_pos_world{ 0.05348720083878f, 0.1339907277809f, -3.684037874323f };
+    Vec4f v1_pos_world{ -0.02750651338714f, -0.03447517605658f, -3.722437583851f };
+    Vec4f v2_pos_world{ 0.08517046970116f, 0.00457807936321f, -5.049799420868f };
+
+    const Mat4f proj = Mat4f::create_perspective(
+        static_cast<float>(45.0 * (std::numbers::pi / 180.0)), static_cast<float>(w) / h, 0.1f, 10.0f);
+
+    Vec4f v0_pos_clip = proj * v0_pos_world;
+    Vec4f v1_pos_clip = proj * v1_pos_world;
+    Vec4f v2_pos_clip = proj * v2_pos_world;
+
+    Vec4f v0_pos_ndc = v0_pos_clip / v0_pos_clip.w;
+    Vec4f v1_pos_ndc = v1_pos_clip / v1_pos_clip.w;
+    Vec4f v2_pos_ndc = v2_pos_clip / v2_pos_clip.w;
+
+    const Mat4f viewport = Mat4f::create_viewport(w, h);
+    Vec4f v0_pos_screen = viewport * v0_pos_ndc;
+    Vec4f v1_pos_screen = viewport * v1_pos_ndc;
+    Vec4f v2_pos_screen = viewport * v2_pos_ndc;
+
+    Vertex v0{ v0_pos_screen.x, v0_pos_screen.y, v0_pos_screen.z };
+    Vertex v1{ v1_pos_screen.x, v1_pos_screen.y, v1_pos_screen.z };
+    Vertex v2{ v2_pos_screen.x, v2_pos_screen.y, v2_pos_screen.z };
+
+    draw_filled_triangle(frame_buffer, z_buffer, v0, v1, v2, color);
+
+    const int index = 281 * w + 407;
+    std::cout << z_buffer[index] << '\n';
+}
+
+void test_z_buffer_2(std::vector<sf::Uint8>& frame_buffer, std::vector<float>& z_buffer) {
+    draw_red_triangle_2(frame_buffer, z_buffer);
+    draw_blue_triangle_2(frame_buffer, z_buffer);
+}
+
+void draw_red_triangle_2(std::vector<sf::Uint8>& frame_buffer, std::vector<float>& z_buffer, sf::Color color) {
+    Vec4f v0_pos_world{ 1.840996095964f, -1.073676172127f, -3.628196093860f };
+    Vec4f v1_pos_world{ 0.06124679400900f, -0.8294603178124f, -3.556538776620f };
+    Vec4f v2_pos_world{ 0.5524953604496f, 1.379455366808f, -7.088986515136f };
+
+    const Mat4f proj = Mat4f::create_perspective(
+        static_cast<float>(45.0 * (std::numbers::pi / 180.0)), static_cast<float>(w) / h, 0.1f, 10.0f);
+
+    Vec4f v0_pos_clip = proj * v0_pos_world;
+    Vec4f v1_pos_clip = proj * v1_pos_world;
+    Vec4f v2_pos_clip = proj * v2_pos_world;
+
+    Vec4f v0_pos_ndc = v0_pos_clip / v0_pos_clip.w;
+    Vec4f v1_pos_ndc = v1_pos_clip / v1_pos_clip.w;
+    Vec4f v2_pos_ndc = v2_pos_clip / v2_pos_clip.w;
+
+    const Mat4f viewport = Mat4f::create_viewport(w, h);
+    Vec4f v0_pos_screen = viewport * v0_pos_ndc;
+    Vec4f v1_pos_screen = viewport * v1_pos_ndc;
+    Vec4f v2_pos_screen = viewport * v2_pos_ndc;
+
+    Vertex v0{ v0_pos_screen.x, v0_pos_screen.y, v0_pos_screen.z };
+    Vertex v1{ v1_pos_screen.x, v1_pos_screen.y, v1_pos_screen.z };
+    Vertex v2{ v2_pos_screen.x, v2_pos_screen.y, v2_pos_screen.z };
+
+    draw_filled_triangle(frame_buffer, z_buffer, v0, v1, v2, color);
+}
+
+void draw_blue_triangle_2(std::vector<sf::Uint8>& frame_buffer, std::vector<float>& z_buffer, sf::Color color) {
+    Vec4f v0_pos_world{ 1.580934848009f, 0.5966194549801f, -3.802308656357f };
+    Vec4f v1_pos_world{ -0.8612277692645f, 0.3735791812889f, -6.322245336638f };
+    Vec4f v2_pos_world{ 1.131590337138f, -1.400787745470f, -3.985780117663f };
+
+    const Mat4f proj = Mat4f::create_perspective(
+        static_cast<float>(45.0 * (std::numbers::pi / 180.0)), static_cast<float>(w) / h, 0.1f, 10.0f);
+
+    Vec4f v0_pos_clip = proj * v0_pos_world;
+    Vec4f v1_pos_clip = proj * v1_pos_world;
+    Vec4f v2_pos_clip = proj * v2_pos_world;
+
+    Vec4f v0_pos_ndc = v0_pos_clip / v0_pos_clip.w;
+    Vec4f v1_pos_ndc = v1_pos_clip / v1_pos_clip.w;
+    Vec4f v2_pos_ndc = v2_pos_clip / v2_pos_clip.w;
+
+    const Mat4f viewport = Mat4f::create_viewport(w, h);
+    Vec4f v0_pos_screen = viewport * v0_pos_ndc;
+    Vec4f v1_pos_screen = viewport * v1_pos_ndc;
+    Vec4f v2_pos_screen = viewport * v2_pos_ndc;
+
+    Vertex v0{ v0_pos_screen.x, v0_pos_screen.y, v0_pos_screen.z };
+    Vertex v1{ v1_pos_screen.x, v1_pos_screen.y, v1_pos_screen.z };
+    Vertex v2{ v2_pos_screen.x, v2_pos_screen.y, v2_pos_screen.z };
+
+    draw_filled_triangle(frame_buffer, z_buffer, v0, v1, v2, color);
+
+    const int index = 281 * w + 407;
+    std::cout << z_buffer[index] << '\n';
+}
+
+void load_model(std::vector<Polygon>& polygons) {
+    const std::string model_path = "data/triangles/triangles.obj";
+
+    tinyobj::attrib_t attrib;
+    std::vector<tinyobj::shape_t> shapes;
+    std::vector<tinyobj::material_t> materials;
+    std::string warn, err;
+
+    if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &err, model_path.c_str()))
+        std::cout << "tinyobjloader: " << err << '\n';
+
+    for (const auto& shape : shapes) {
+        std::vector<Vertex_new> vertices;
+        for (const auto& index : shape.mesh.indices) {
+            float x = attrib.vertices[3 * index.vertex_index + 0];
+            float y = attrib.vertices[3 * index.vertex_index + 1];
+            float z = attrib.vertices[3 * index.vertex_index + 2];
+
+            Vertex_new vertex{ Vec3f{x, y, z} };
+            vertices.push_back(vertex);
+        }
+        Polygon polygon{ { vertices[0], vertices[1], vertices[2] } };
+        polygons.push_back(polygon);
     }
 }
 
-void draw_filled_triangle_(std::vector<sf::Uint8>& frame_buffer, Vertex a, Vertex b, Vertex c) {
-    draw_filled_triangle(frame_buffer, a.pos.x, a.pos.y, b.pos.x, b.pos.y, c.pos.x, c.pos.y);
+void rasterize_polygons_wireframe(const std::vector<Polygon>& polygons, FrameBuffer& frame_buffer) {
+    const float fov_vert_rad = static_cast<float>(45.0 * (std::numbers::pi / 180.0));
+    const float aspect_ratio = static_cast<float>(frame_buffer.w) / frame_buffer.h;
+    const Mat4f proj = Mat4f::create_perspective(fov_vert_rad, aspect_ratio, 0.1f, 10.0f);
+    const Mat4f viewport = Mat4f::create_viewport(frame_buffer.w, frame_buffer.h);
+
+    for (const auto& polygon : polygons) {
+        std::vector<Vertex_new> vertices_screen;
+        for (const auto& vertex : polygon.vertices) {
+            Vec4f pos{ vertex.pos };
+
+            Vec4f pos_clip = proj * pos;
+            Vec4f pos_ndc = pos_clip / pos_clip.w;
+            Vec4f pos_screen = viewport * pos_ndc;
+
+            vertices_screen.push_back(Vertex_new{ Vec3f{pos_screen} });
+        }
+        Polygon polygon_screen{ {vertices_screen[0], vertices_screen[1], vertices_screen[2]} };
+        draw_polygon_wireframe(polygon_screen, frame_buffer);
+    }
 }
 
-void draw_filled_triangle(std::vector<sf::Uint8>& frame_buffer, float x0, float y0, float x1, float y1, float x2, float y2) {
+void draw_filled_triangle(std::vector<sf::Uint8>& frame_buffer, std::vector<float>& z_buffer, Vertex v0, Vertex v1, Vertex v2, sf::Color color) {
     // Сортируем вершины по Y по возрастанию.
-    if (y0 > y1) {
-        std::swap(y0, y1);
-        std::swap(x0, x1);
-    }
-    if (y1 > y2) {
-        std::swap(y1, y2);
-        std::swap(x1, x2);
-    }
-    if (y0 > y1) {
-        std::swap(y0, y1);
-        std::swap(x0, x1);
-    }
+    if (v0.y > v1.y)
+        std::swap(v0, v1);
+    if (v1.y > v2.y)
+        std::swap(v1, v2);
+    if (v0.y > v1.y)
+        std::swap(v0, v1);
 
     // Trivial reject по верхней/нижней границе.
     // NOTE: Нет смысла исключать ноль для верхней границы, поскольку в итоге все-равно
     // получим ceil(0)-1 для y-координаты нижней скан-линии и растеризации не будет.
     // Для нижней же границы ноль нужно исключить, чтобы не было пропуска пикселов по нижней стороне смежного треугольника.
-    if (y2 <= 0.0f || y0 > (h - 1))
+    if (v2.y <= 0.0f || v0.y > (h - 1))
         return;
 
     // Trivial reject по левой границе.
     // NOTE: Нет смысла исключать ноль для левой границы, поскольку в итоге все-равно
     // получим ceil(0)-1 для концов всех скан-линий и растеризации не будет.
-    if ((x0 <= 0.0f) && (x1 <= 0.0f) && (x2 <= 0.0f))
+    if ((v0.x <= 0.0f) && (v1.x <= 0.0f) && (v2.x <= 0.0f))
         return;
 
     // Trivial reject по правой границе.
     // NOTE: Важно исключить ноль, чтобы не было пропуска пикселов по правой стороне смежного треугольника.
-    if ((x0 > (w - 1)) && (x1 > (w - 1)) && (x2 > (w - 1)))
+    if ((v0.x > (w - 1)) && (v1.x > (w - 1)) && (v2.x > (w - 1)))
         return;
 
     // Классифицируем треугольник.
     // NOTE: Проверяем на точное равенство, а не через epsilon, поскольку в противном случае
     // возможна некорректная растеризация: пропуск пиксела или двойная растеризация одного и того же
     // пиксела для двух смежных треугольников.
-    const bool flat_bottom = (y1 == y2);
-    const bool flat_top = (y0 == y1);
-    if (flat_bottom) {
-        draw_flat_bottom_filled_triangle(frame_buffer, x0, y0, x1, y1, x2, y2, sf::Color::Red);
-    }
-    else if (flat_top) {
-        draw_flat_top_filled_triangle(frame_buffer, x0, y0, x1, y1, x2, y2, sf::Color::Green);
-    }
-    // Разделяем треугольник на flat_bottom и flat_top.
-    else {
-        const float inv_slope = (x2 - x0) / (y2 - y0); // Наклон самой длинной грани.
-        const float height_top_triangle = y1 - y0;
+    const bool flat_bottom = (v1.y == v2.y);
+    const bool flat_top = (v0.y == v1.y);
+    if (flat_bottom)
+        draw_flat_bottom_filled_triangle(frame_buffer, z_buffer, v0, v1, v2, color);
+    else if (flat_top)
+        draw_flat_top_filled_triangle(frame_buffer, z_buffer, v0, v1, v2, color);
+    else { // Разделяем треугольник на flat_bottom и flat_top.
+        const float inv_slope = (v2.x - v0.x) / (v2.y - v0.y); // Наклон самого длинного ребра.
+        const float height_top_triangle = v1.y - v0.y;
 
-        // Точка пересечения на длинной грани при разделении треугольников.
-        const float intersect_x = x0 + height_top_triangle * inv_slope;
-        const float intersect_y = y1;
+        // Точка пересечения на длинном ребре при разделении треугольников.
+        const float intersect_x = v0.x + height_top_triangle * inv_slope;
+        const float intersect_y = v1.y;
 
-        draw_flat_bottom_filled_triangle(frame_buffer, x0, y0, intersect_x, intersect_y, x1, y1, sf::Color::Red);
-        draw_flat_top_filled_triangle(frame_buffer, intersect_x, intersect_y, x1, y1, x2, y2, sf::Color::Green);
+        // Определяем z-атрибут точки пересечения, интерполируя вдоль самого длинного ребра.
+        const float z_slope_vert = (v2.z - v0.z) / (v2.y - v0.y);
+        const float intersect_z = v0.z + (height_top_triangle * z_slope_vert);
+
+        Vertex intersect{ intersect_x, intersect_y, intersect_z };
+
+        draw_flat_bottom_filled_triangle(frame_buffer, z_buffer, v0, intersect, v1, color);
+        draw_flat_top_filled_triangle(frame_buffer, z_buffer, intersect, v1, v2, color);
     }
 }
 
-void draw_flat_bottom_filled_triangle(std::vector<sf::Uint8>& frame_buffer, float x0, float y0, float x1, float y1, float x2, float y2, sf::Color color) {
-    // Сортируем нижние вершины по X по возрастанию.
-    if (x1 > x2) {
-        std::swap(x1, x2);
-        std::swap(y1, y2);
-    }
+void draw_flat_bottom_filled_triangle(std::vector<sf::Uint8>& frame_buffer, std::vector<float>& z_buffer, Vertex v0, Vertex v1, Vertex v2, sf::Color color) {
+    // Сортируем нижние вершины по x по возрастанию.
+    if (v1.x > v2.x)
+        std::swap(v1, v2);
 
-    const float height = y2 - y0; // Определяем высоту по правой нижней вершине.
-    const float slope_left_inv = (x1 - x0) / height;
-    const float slope_right_inv = (x2 - x0) / height;
+    const float height = v2.y - v0.y; // Определяем высоту по правой нижней вершине.
+    const float slope_left_inv = (v1.x - v0.x) / height;
+    const float slope_right_inv = (v2.x - v0.x) / height;
 
     // Начинаем отрисовку с верхней вершины.
-    float scan_line_start = x0;
-    float scan_line_end = x0;
+    float scan_line_start = v0.x;
+    float scan_line_end = v0.x;
+
+    // Z-атрибут начала текущей скан-линии.
+    // NOTE: Текущая скан-линия - это скан-линия, соответствующая текущему значению y.
+    float scan_line_start_z = v0.z;
+
+    // Slope'ы z-атрибутов при интерполяции по боковым рёбрам.
+    float z_slope_vert_left = (v1.z - v0.z) / height;
+    float z_slope_vert_right = (v2.z - v0.z) / height;
+
+    // Slope z-атрибута при интерполяции вдоль скан-линий.
+    // NOTE: Постоянный для всех скан-линий.
+    float z_slope_horiz = (z_slope_vert_right - z_slope_vert_left) / (slope_right_inv - slope_left_inv);
 
     // Клиппинг с верхней границей экрана.
     int y_start = 0;
-    if (y0 < 0.0f) {
+    if (v0.y < 0.0f) {
         // Корректируем начало и конец первой скан-линии.
-        const float clip_height = 0.0f - y0;
+        const float clip_height = 0.0f - v0.y;
         scan_line_start = scan_line_start + clip_height * slope_left_inv;
         scan_line_end = scan_line_end + clip_height * slope_right_inv;
+
+        // Интерполируем z-атрибут начала первой скан-линии.
+        scan_line_start_z += z_slope_vert_left * clip_height;
     }
     else {
         // Определяем y-координату первой скан-линии (следуем правилу top-left).
-        y_start = std::ceil(y0);
+        y_start = std::ceil(v0.y);
 
         // Корректируем начало и конец первой скан-линии.
-        const float delta_y = y_start - y0;
+        const float delta_y = y_start - v0.y;
         scan_line_start = scan_line_start + delta_y * slope_left_inv;
         scan_line_end = scan_line_end + delta_y * slope_right_inv;
+
+        // Интерполируем z-атрибут начала первой скан-линии.
+        scan_line_start_z += z_slope_vert_left * delta_y;
     }
 
     // Определяем y-координату последней скан-линии (следуем правилу top-left).
@@ -1282,10 +387,9 @@ void draw_flat_bottom_filled_triangle(std::vector<sf::Uint8>& frame_buffer, floa
     // то поскольку последняя скан-линия flat_bottom треугольника определяется по правой нижней координате,
     // то первая скан-линия смежного flat_top треугольника должна определяться по правой верхней,
     // чтобы не было ни пропуска скан-линии ни наложения.
-    int y_end = std::ceil(y2) - 1;
-    if (y2 > h) {
+    int y_end = std::ceil(v2.y) - 1;
+    if (v2.y > h)
         y_end = h - 1;
-    }
 
     for (int y = y_start; y <= y_end; y++) {
         // Вычисляем целочисленные значения начала и конца текущей скан-линии, следуя правилу top-left.
@@ -1294,57 +398,83 @@ void draw_flat_bottom_filled_triangle(std::vector<sf::Uint8>& frame_buffer, floa
         const int scan_line_start_int = (scan_line_start < 0.0f) ? 0 : std::ceil(scan_line_start);
         const int scan_line_end_int = (scan_line_end > w) ? (w - 1) : (std::ceil(scan_line_end) - 1);
 
+        // Интерполируем z-атрибут начала текущей скан-линии с учетом перехода к целочисленным координатам.
+        // NOTE: Интерполяция конца скан-линии не требуется, поскольку мы получим корректный z-атрибут
+        // естественным образом, итеративно интерполируясь вправо.
+        float cur_frag_z = scan_line_start_z;
+        const float scan_line_start_delta = static_cast<float>(scan_line_start_int) - scan_line_start;
+        cur_frag_z += z_slope_horiz * scan_line_start_delta;
         for (int x = scan_line_start_int; x <= scan_line_end_int; x++) {
-            set_pixel_color(frame_buffer, x, y, color);
+            if (perform_depth_test(z_buffer, x, y, cur_frag_z))
+                set_pixel_color(frame_buffer, x, y, color);
+
+            cur_frag_z += z_slope_horiz;
         }
 
         // Вычисляем начало и конец следующей скан-линии.
         scan_line_start += slope_left_inv;
         scan_line_end += slope_right_inv;
+
+        // Интерполируем z-атрибут начала следующей скан-линии.
+        scan_line_start_z += z_slope_vert_left;
     }
 }
 
-void draw_flat_top_filled_triangle(std::vector<sf::Uint8>& frame_buffer, float x0, float y0, float x1, float y1, float x2, float y2, sf::Color color) {
-    // Сортируем верхние вершины по X по возрастанию.
-    if (x0 > x1) {
-        std::swap(x0, x1);
-        std::swap(y0, y1);
-    }
+void draw_flat_top_filled_triangle(std::vector<sf::Uint8>& frame_buffer, std::vector<float>& z_buffer, Vertex v0, Vertex v1, Vertex v2, sf::Color color) {
+    // Сортируем верхние вершины по x по возрастанию.
+    if (v0.x > v1.x)
+        std::swap(v0, v1);
 
-    const float height = y2 - y1; // Определяем высоту по правой верхней вершине.
-    const float slope_left_inv = (x2 - x0) / height;
-    const float slope_right_inv = (x2 - x1) / height;
+    const float height = v2.y - v1.y; // Определяем высоту по правой верхней вершине.
+    const float slope_left_inv = (v2.x - v0.x) / height;
+    const float slope_right_inv = (v2.x - v1.x) / height;
 
     // Начинаем отрисовку с двух верхних вершин.
-    float scan_line_start = x0;
-    float scan_line_end = x1;
+    float scan_line_start = v0.x;
+    float scan_line_end = v1.x;
+
+    // Z-атрибут начала текущей скан-линии.
+    float scan_line_start_z = v0.z;
+
+    // Slope'ы z-атрибутов при интерполяции по боковым рёбрам.
+    float z_slope_vert_left = (v2.z - v0.z) / height;
+    float z_slope_vert_right = (v2.z - v1.z) / height;
+
+    // Slope z-атрибута при интерполяции вдоль скан-линий.
+    // NOTE: Постоянный для всех скан-линий.
+    float z_slope_horiz = (z_slope_vert_right - z_slope_vert_left) / (slope_right_inv - slope_left_inv);
 
     // Клиппинг с верхней границей экрана.
     // NOTE: Чтобы быть последовательными, ориентируемся на правую вершину, поскольку по ней определяем
     // высоту и по ней же определяем y-координату первой скан-линии. Более того, по правой же вершине определяем
     // для flat_bottom треугольника y-координату последней скан-линии.
     int y_start = 0;
-    if (y1 < 0.0f) {
+    if (v1.y < 0.0f) {
         // Корректируем начало и конец первой скан-линии.
-        const float clip_height = 0.0f - y1;
+        const float clip_height = 0.0f - v1.y;
         scan_line_start = scan_line_start + clip_height * slope_left_inv;
         scan_line_end = scan_line_end + clip_height * slope_right_inv;
+
+        // Интерполируем z-атрибут начала первой скан-линии.
+        scan_line_start_z += z_slope_vert_left * clip_height;
     }
     else {
         // Первую скан-линию определяем по правой верхней вершине, как описано в замечании
         // к растеризации flat_bottom треугольника.
-        y_start = std::ceil(y1);
+        y_start = std::ceil(v1.y);
 
         // Корректируем начало и конец первой скан-линии.
-        const float delta_y = y_start - y1;
+        const float delta_y = y_start - v1.y;
         scan_line_start = scan_line_start + delta_y * slope_left_inv;
         scan_line_end = scan_line_end + delta_y * slope_right_inv;
+
+        // Интерполируем z-атрибут начала первой скан-линии.
+        scan_line_start_z += z_slope_vert_left * delta_y;
     }
 
-    int y_end = std::ceil(y2) - 1;
-    if (y2 > h) {
+    int y_end = std::ceil(v2.y) - 1;
+    if (v2.y > h)
         y_end = h - 1;
-    }
 
     for (int y = y_start; y <= y_end; y++) {
         // Вычисляем целочисленные значения начала и конца текущей скан-линии, следуя правилу top-left.
@@ -1353,12 +483,22 @@ void draw_flat_top_filled_triangle(std::vector<sf::Uint8>& frame_buffer, float x
         const int scan_line_start_int = (scan_line_start < 0.0f) ? 0 : std::ceil(scan_line_start);
         const int scan_line_end_int = (scan_line_end > w) ? (w - 1) : (std::ceil(scan_line_end) - 1);
 
+        // Интерполируем цвет начала текущей скан-линии с учетом перехода к целочисленным координатам.
+        float cur_frag_z = scan_line_start_z;
+        const float scan_line_start_delta = static_cast<float>(scan_line_start_int) - scan_line_start;
+        cur_frag_z += z_slope_horiz * scan_line_start_delta;
         for (int x = scan_line_start_int; x <= scan_line_end_int; x++) {
-            set_pixel_color(frame_buffer, x, y, color);
+            if (perform_depth_test(z_buffer, x, y, cur_frag_z))
+                set_pixel_color(frame_buffer, x, y, color);
+
+            cur_frag_z += z_slope_horiz;
         }
 
         // Вычисляем начало и конец следующей скан-линии.
         scan_line_start += slope_left_inv;
         scan_line_end += slope_right_inv;
+
+        // Интерполируем z-атрибут начала следующей скан-линии.
+        scan_line_start_z += z_slope_vert_left;
     }
 }
