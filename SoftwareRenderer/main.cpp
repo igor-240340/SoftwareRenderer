@@ -230,7 +230,13 @@ void draw_blue_triangle_2(std::vector<sf::Uint8>& frame_buffer, std::vector<floa
 }
 
 void load_model(std::vector<Polygon>& polygons) {
-    const std::string model_path = "data/triangles/triangles.obj";
+    //const std::string model_path = "data/triangles/triangles.obj";
+    //const std::string model_path = "data/triangles_clipping/triangles_clipping.obj";
+    //const std::string model_path = "data/viking_room/viking_room.obj";
+    //const std::string model_path = "data/blender_monkey/blender_monkey.obj";
+    const std::string model_path = "data/box/box.obj";
+    //const std::string model_path = "data/torus/torus.obj";
+    //const std::string model_path = "data/uv_sphere/uv_sphere.obj";
 
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> shapes;
@@ -241,17 +247,31 @@ void load_model(std::vector<Polygon>& polygons) {
         std::cout << "tinyobjloader: " << err << '\n';
 
     for (const auto& shape : shapes) {
-        std::vector<Vertex_new> vertices;
-        for (const auto& index : shape.mesh.indices) {
-            float x = attrib.vertices[3 * index.vertex_index + 0];
-            float y = attrib.vertices[3 * index.vertex_index + 1];
-            float z = attrib.vertices[3 * index.vertex_index + 2];
+        for (size_t i = 0; i <= shape.mesh.indices.size() - 3; i += 3) {
+            const auto& index0 = shape.mesh.indices[i + 0];
+            const auto& index1 = shape.mesh.indices[i + 1];
+            const auto& index2 = shape.mesh.indices[i + 2];
 
-            Vertex_new vertex{ Vec3f{x, y, z} };
-            vertices.push_back(vertex);
+            const Vertex_new v0{ Vec3f{
+                attrib.vertices[3 * index0.vertex_index + 0],
+                attrib.vertices[3 * index0.vertex_index + 1],
+                attrib.vertices[3 * index0.vertex_index + 2]
+            } };
+
+            const Vertex_new v1{ Vec3f{
+                attrib.vertices[3 * index1.vertex_index + 0],
+                attrib.vertices[3 * index1.vertex_index + 1],
+                attrib.vertices[3 * index1.vertex_index + 2]
+            } };
+
+            const Vertex_new v2{ Vec3f{
+                attrib.vertices[3 * index2.vertex_index + 0],
+                attrib.vertices[3 * index2.vertex_index + 1],
+                attrib.vertices[3 * index2.vertex_index + 2]
+            } };
+
+            polygons.push_back(Polygon{ { v0, v1, v2 } });
         }
-        Polygon polygon{ { vertices[0], vertices[1], vertices[2] } };
-        polygons.push_back(polygon);
     }
 }
 
