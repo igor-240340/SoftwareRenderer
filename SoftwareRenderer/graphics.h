@@ -37,3 +37,6 @@ void draw_polygon_solid(Polygon polygon_screen, FrameBuffer& frame_buffer, ZBuff
 void draw_flat_bottom_polygon_solid(Polygon polygon_screen, FrameBuffer& frame_buffer, ZBuffer& z_buffer);
 void draw_flat_top_polygon_solid(Polygon polygon_screen, FrameBuffer& frame_buffer, ZBuffer& z_buffer);
 bool perform_depth_test(int frag_x, int frag_y, float frag_z, ZBuffer& z_buffer);
+
+sf::Color read_frame_buffer(int x, int y, const FrameBuffer& frame_buffer);
+float read_z_buffer(int x, int y, const ZBuffer& z_buffer);

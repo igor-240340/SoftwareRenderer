@@ -450,3 +450,19 @@ bool perform_depth_test(int frag_x, int frag_y, float frag_z, ZBuffer& z_buffer)
 
     return false;
 }
+
+sf::Color read_frame_buffer(int x, int y, const FrameBuffer& frame_buffer) {
+    const int index = (frame_buffer.w * y + x) * 4;
+
+    const sf::Uint8 r = frame_buffer.rgba_array[index];
+    const sf::Uint8 g = frame_buffer.rgba_array[index + 1];
+    const sf::Uint8 b = frame_buffer.rgba_array[index + 2];
+    const sf::Uint8 a = frame_buffer.rgba_array[index + 3];
+
+    return sf::Color(r, g, b, a);
+}
+
+float read_z_buffer(int x, int y, const ZBuffer& z_buffer) {
+    const int index = z_buffer.w * y + x;
+    return z_buffer.depth_array[index];
+}
