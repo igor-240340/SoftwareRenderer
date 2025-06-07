@@ -170,7 +170,7 @@ bool clip_line_coh_suth(float& x0, float& y0, float& x1, float& y1, const FrameB
         }
 
         if (first_edge == EdgeBit::left || first_edge == EdgeBit::right) {
-            float edge_x = first_edge == EdgeBit::left ? 0 : (frame_buffer.w - 1);
+            float edge_x = first_edge == EdgeBit::left ? 0.0f : static_cast<float>(frame_buffer.w - 1);
             float slope = (p1.y - p0.y) / (p1.x - p0.x);
 
             float x_excess = edge_x - p0.x;
@@ -178,7 +178,7 @@ bool clip_line_coh_suth(float& x0, float& y0, float& x1, float& y1, const FrameB
             p0.y += x_excess * slope;
         }
         else {
-            float edge_y = first_edge == EdgeBit::top ? 0 : (frame_buffer.h - 1);
+            float edge_y = first_edge == EdgeBit::top ? 0.0f : static_cast<float>(frame_buffer.h - 1);
             float inv_slope = (p1.x - p0.x) / (p1.y - p0.y);
 
             float y_excess = edge_y - p0.y;
@@ -305,7 +305,7 @@ void draw_flat_bottom_polygon_solid(Polygon polygon_screen, FrameBuffer& frame_b
     }
     else {
         // Определяем y-координату первой скан-линии (следуем правилу top-left).
-        y_start = std::ceil(v0.pos.y);
+        y_start = static_cast<int>(std::ceil(v0.pos.y));
 
         // Корректируем начало и конец первой скан-линии.
         const float delta_y = y_start - v0.pos.y;
@@ -321,7 +321,7 @@ void draw_flat_bottom_polygon_solid(Polygon polygon_screen, FrameBuffer& frame_b
     // то поскольку последняя скан-линия flat_bottom треугольника определяется по правой нижней координате,
     // то первая скан-линия смежного flat_top треугольника должна определяться по правой верхней,
     // чтобы не было ни пропуска скан-линии ни наложения.
-    int y_end = std::ceil(v2.pos.y) - 1;
+    int y_end = static_cast<int>(std::ceil(v2.pos.y) - 1);
     if (v2.pos.y > frame_buffer.h)
         y_end = frame_buffer.h - 1;
 
@@ -329,8 +329,8 @@ void draw_flat_bottom_polygon_solid(Polygon polygon_screen, FrameBuffer& frame_b
         // Вычисляем целочисленные значения начала и конца текущей скан-линии, следуя правилу top-left.
         // Если начало скан-линии находится за левой границей окна, прижимаем к нулю.
         // Если конец скан-линии находится за правой границей окна плюс один пиксел, то прижимаем к правой границе.
-        const int scan_line_start_int = (scan_line_start < 0.0f) ? 0 : std::ceil(scan_line_start);
-        const int scan_line_end_int = (scan_line_end > frame_buffer.w) ? (frame_buffer.w - 1) : (std::ceil(scan_line_end) - 1);
+        const int scan_line_start_int = (scan_line_start < 0.0f) ? 0 : static_cast<int>(std::ceil(scan_line_start));
+        const int scan_line_end_int = (scan_line_end > frame_buffer.w) ? (frame_buffer.w - 1) : static_cast<int>(std::ceil(scan_line_end) - 1);
 
         // Интерполируем z-атрибут начала текущей скан-линии с учетом перехода к целочисленным координатам.
         // NOTE: Интерполяция конца скан-линии не требуется, поскольку мы получим корректный z-атрибут
@@ -399,7 +399,7 @@ void draw_flat_top_polygon_solid(Polygon polygon_screen, FrameBuffer& frame_buff
     else {
         // Первую скан-линию определяем по правой верхней вершине, как описано в замечании
         // к растеризации flat_bottom треугольника.
-        y_start = std::ceil(v1.pos.y);
+        y_start = static_cast<int>(std::ceil(v1.pos.y));
 
         // Корректируем начало и конец первой скан-линии.
         const float delta_y = y_start - v1.pos.y;
@@ -410,7 +410,7 @@ void draw_flat_top_polygon_solid(Polygon polygon_screen, FrameBuffer& frame_buff
         scan_line_start_z += z_slope_vert_left * delta_y;
     }
 
-    int y_end = std::ceil(v2.pos.y) - 1;
+    int y_end = static_cast<int>(std::ceil(v2.pos.y) - 1);
     if (v2.pos.y > frame_buffer.h)
         y_end = frame_buffer.h - 1;
 
@@ -418,8 +418,8 @@ void draw_flat_top_polygon_solid(Polygon polygon_screen, FrameBuffer& frame_buff
         // Вычисляем целочисленные значения начала и конца текущей скан-линии, следуя правилу top-left.
         // Если начало скан-линии находится за левой границей окна, прижимаем к нулю.
         // Если конец скан-линии находится за правой границей окна плюс один пиксел, то прижимаем к правой границе.
-        const int scan_line_start_int = (scan_line_start < 0.0f) ? 0 : std::ceil(scan_line_start);
-        const int scan_line_end_int = (scan_line_end > frame_buffer.w) ? (frame_buffer.w - 1) : (std::ceil(scan_line_end) - 1);
+        const int scan_line_start_int = (scan_line_start < 0.0f) ? 0 : static_cast<int>(std::ceil(scan_line_start));
+        const int scan_line_end_int = (scan_line_end > frame_buffer.w) ? (frame_buffer.w - 1) : static_cast<int>(std::ceil(scan_line_end) - 1);
 
         // Интерполируем цвет начала текущей скан-линии с учетом перехода к целочисленным координатам.
         float cur_frag_z = scan_line_start_z;

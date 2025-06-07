@@ -220,9 +220,9 @@ void debug_z_fighting(FrameBuffer& frame_buffer, ZBuffer& z_buffer) {
     polygons_screen[9].color = sf::Color::Red; // Лежит.
 
     // Z-Bias.
-    polygons_screen[9].vertices[0].pos.z += 1e-6;
-    polygons_screen[9].vertices[1].pos.z += 1e-6;
-    polygons_screen[9].vertices[2].pos.z += 1e-6;
+    polygons_screen[9].vertices[0].pos.z += 1e-6f;
+    polygons_screen[9].vertices[1].pos.z += 1e-6f;
+    polygons_screen[9].vertices[2].pos.z += 1e-6f;
 
     draw_polygon_solid(polygons_screen[7], frame_buffer, z_buffer);
     draw_polygon_solid(polygons_screen[9], frame_buffer, z_buffer);
