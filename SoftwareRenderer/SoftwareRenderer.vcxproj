@@ -153,17 +153,13 @@
     <ClCompile Include="Mat4f.cpp" />
     <ClCompile Include="Vec3f.cpp" />
     <ClCompile Include="Vec4f.cpp" />
-    <ClCompile Include="Vertex4.h" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Camera.h" />
     <ClInclude Include="graphics.h" />
     <ClInclude Include="Mat4f.h" />
-    <ClInclude Include="Polygon.h" />
     <ClInclude Include="Vec3f.h" />
-    <ClInclude Include="Vec2i.h" />
     <ClInclude Include="Vec4f.h" />
-    <ClInclude Include="Vertex.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
