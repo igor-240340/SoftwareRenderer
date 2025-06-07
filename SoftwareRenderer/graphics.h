@@ -6,12 +6,13 @@
 
 #include "Vec3f.h"
 
-struct Vertex_new {
+struct Vertex {
     Vec3f pos;
 };
 
 struct Polygon {
-    std::array<Vertex_new, 3> vertices;
+    std::array<Vertex, 3> vertices;
+    sf::Color color;
 };
 
 struct FrameBuffer {
@@ -20,8 +21,19 @@ struct FrameBuffer {
     std::vector<sf::Uint8> rgba_array;
 };
 
+struct ZBuffer {
+    int w;
+    int h;
+    std::vector<float> depth_array;
+};
+
 void draw_polygon_wireframe(Polygon polygon_screen, FrameBuffer& frame_buffer);
 void draw_line_dda(int x0, int y0, int x1, int y1, sf::Color color, FrameBuffer& frame_buffer);
 void set_pixel_color(int x, int y, sf::Color color, FrameBuffer& frame_buffer);
 void clear_frame_buffer(sf::Color color, FrameBuffer& frame_buffer);
+void clear_z_buffer(float depth_value, ZBuffer& z_buffer);
 bool clip_line_coh_suth(float& x0, float& y0, float& x1, float& y1, const FrameBuffer& frame_buffer);
+void draw_polygon_solid(Polygon polygon_screen, FrameBuffer& frame_buffer, ZBuffer& z_buffer);
+void draw_flat_bottom_polygon_solid(Polygon polygon_screen, FrameBuffer& frame_buffer, ZBuffer& z_buffer);
+void draw_flat_top_polygon_solid(Polygon polygon_screen, FrameBuffer& frame_buffer, ZBuffer& z_buffer);
+bool perform_depth_test(int frag_x, int frag_y, float frag_z, ZBuffer& z_buffer);
