@@ -22,24 +22,11 @@ constexpr int h = 600;
 void load_model(std::string model_path, std::vector<Polygon>& polygons);
 void rasterize_polygons_wireframe(const std::vector<Polygon>& polygons, FrameBuffer& frame_buffer);
 void rasterize_polygons_solid(const std::vector<Polygon>& polygons, FrameBuffer& frame_buffer, ZBuffer& z_buffer);
+void rasterize_polygons_flat_shaded(const std::vector<Polygon>& polygons, const Light& light, FrameBuffer& frame_buffer, ZBuffer& z_buffer);
 
 void debug_z_fighting(FrameBuffer& frame_buffer, ZBuffer& z_buffer);
 
-sf::Color get_random_color() {
-    static std::random_device rd;
-    static std::mt19937 gen(rd());
-    //static std::normal_distribution<float> dist(128.0f, 28.0f);
-    static std::uniform_int_distribution dist(0, 255);
-
-    /*sf::Uint8 r = static_cast<sf::Uint8>(std::clamp(static_cast<int>(std::round(dist(gen))), 0, 255));
-    sf::Uint8 g = static_cast<sf::Uint8>(std::clamp(static_cast<int>(std::round(dist(gen))), 0, 255));
-    sf::Uint8 b = static_cast<sf::Uint8>(std::clamp(static_cast<int>(std::round(dist(gen))), 0, 255));*/
-
-    sf::Uint8 r = static_cast<sf::Uint8>(dist(gen));
-    sf::Uint8 g = static_cast<sf::Uint8>(dist(gen));
-    sf::Uint8 b = static_cast<sf::Uint8>(dist(gen));
-    return sf::Color(r, g, b);
-}
+sf::Color get_random_color();
 
 int main() {
     sf::RenderWindow window(sf::VideoMode(w, h), "Software Renderer");
@@ -49,6 +36,7 @@ int main() {
         std::cout << "sfml: texture.create() failed\n";
     sf::Sprite sprite(texture);
 
+    Light light{ Vec3f{0.0f, 0.0f, -1.0f} };
     FrameBuffer frame_buffer{ w, h, std::vector<sf::Uint8>(w * h * 4) };
     ZBuffer z_buffer{ w, h, std::vector<float>(w * h) };
 
@@ -56,10 +44,11 @@ int main() {
     //const std::string model_path = "data/triangles/triangles.obj";
     //const std::string model_path = "data/triangles_clipping/triangles_clipping.obj";
     //const std::string model_path = "data/viking_room/viking_room.obj";
-    //const std::string model_path = "data/blender_monkey/blender_monkey.obj";
-    const std::string model_path = "data/box/box.obj";
+    //const std::string model_path = "data/box/box.obj";
     //const std::string model_path = "data/torus/torus.obj";
     //const std::string model_path = "data/uv_sphere/uv_sphere.obj";
+    //const std::string model_path = "data/skull/skull.obj";
+    const std::string model_path = "data/pig/pig.obj";
     load_model(model_path, polygons);
 
     while (window.isOpen()) {
@@ -73,8 +62,10 @@ int main() {
         clear_z_buffer(1.0f, z_buffer);
 
         //rasterize_polygons_wireframe(polygons, frame_buffer);
-        rasterize_polygons_solid(polygons, frame_buffer, z_buffer);
+        //rasterize_polygons_solid(polygons, frame_buffer, z_buffer);
         //debug_z_fighting(frame_buffer, z_buffer);
+
+        rasterize_polygons_flat_shaded(polygons, light, frame_buffer, z_buffer);
 
         texture.update(frame_buffer.rgba_array.data());
 
@@ -119,7 +110,8 @@ void load_model(std::string model_path, std::vector<Polygon>& polygons) {
                 attrib.vertices[3 * index2.vertex_index + 2]
             } };
 
-            polygons.push_back(Polygon{ { v0, v1, v2 }, get_random_color() });
+            //polygons.push_back(Polygon{ { v0, v1, v2 }, get_random_color() });
+            polygons.push_back(Polygon{ { v0, v1, v2 }, sf::Color::White });
         }
     }
 }
@@ -163,8 +155,44 @@ void rasterize_polygons_solid(const std::vector<Polygon>& polygons, FrameBuffer&
 
             vertices_screen.push_back(Vertex{ Vec3f{pos_screen} });
         }
-        Polygon polygon_screen{ {vertices_screen[0], vertices_screen[1], vertices_screen[2]}, polygon.color };
+        Polygon polygon_screen{ {vertices_screen[0], vertices_screen[1], vertices_screen[2]}, polygon.albedo_color };
         draw_polygon_solid(polygon_screen, frame_buffer, z_buffer);
+    }
+}
+
+void rasterize_polygons_flat_shaded(const std::vector<Polygon>& polygons, const Light& light, FrameBuffer& frame_buffer, ZBuffer& z_buffer) {
+    const float fov_vert_rad = static_cast<float>(45.0 * (std::numbers::pi / 180.0));
+    const float aspect_ratio = static_cast<float>(frame_buffer.w) / frame_buffer.h;
+    const Mat4f proj = Mat4f::create_perspective(fov_vert_rad, aspect_ratio, 0.1f, 10.0f);
+    const Mat4f viewport = Mat4f::create_viewport(frame_buffer.w, frame_buffer.h);
+
+    for (const auto& polygon : polygons) {
+        // Вычисляем нормаль полигона.
+        const Vertex& v0 = polygon.vertices[0];
+        const Vertex& v1 = polygon.vertices[1];
+        const Vertex& v2 = polygon.vertices[2];
+
+        const Vec3f edge1 = v1.pos - v0.pos;
+        const Vec3f edge2 = v2.pos - v0.pos;
+        const Vec3f polygon_normal = Vec3f::cross(edge1, edge2).get_normalized();
+
+        std::vector<Vertex> vertices_screen;
+        for (const auto& vertex : polygon.vertices) {
+            Vec4f pos{ vertex.pos };
+
+            Vec4f pos_clip = proj * pos;
+            Vec4f pos_ndc = pos_clip / pos_clip.w;
+            Vec4f pos_screen = viewport * pos_ndc;
+
+            vertices_screen.push_back(Vertex{ Vec3f{pos_screen} });
+        }
+
+        Polygon polygon_screen{
+            {vertices_screen[0], vertices_screen[1], vertices_screen[2]},
+            polygon.albedo_color,
+            polygon_normal
+        };
+        draw_polygon_flat_shaded(polygon_screen, light, frame_buffer, z_buffer);
     }
 }
 
@@ -199,7 +227,7 @@ void debug_z_fighting(FrameBuffer& frame_buffer, ZBuffer& z_buffer) {
 
             vertices_screen.push_back(Vertex{ Vec3f{pos_screen} });
         }
-        Polygon polygon_screen{ {vertices_screen[0], vertices_screen[1], vertices_screen[2]}, polygon.color };
+        Polygon polygon_screen{ {vertices_screen[0], vertices_screen[1], vertices_screen[2]}, polygon.albedo_color };
         polygons_screen.push_back(polygon_screen);
     }
 
@@ -216,8 +244,8 @@ void debug_z_fighting(FrameBuffer& frame_buffer, ZBuffer& z_buffer) {
     //draw_polygon_solid(polygons_screen[10], frame_buffer, z_buffer);
     //draw_polygon_solid(polygons_screen[11], frame_buffer, z_buffer);
 
-    polygons_screen[7].color = sf::Color::Blue; // Стоит.
-    polygons_screen[9].color = sf::Color::Red; // Лежит.
+    polygons_screen[7].albedo_color = sf::Color::Blue; // Стоит.
+    polygons_screen[9].albedo_color = sf::Color::Red; // Лежит.
 
     // Z-Bias.
     polygons_screen[9].vertices[0].pos.z += 1e-6f;
@@ -231,4 +259,20 @@ void debug_z_fighting(FrameBuffer& frame_buffer, ZBuffer& z_buffer) {
     const int y = 488;
     const sf::Color color = read_frame_buffer(x, y, frame_buffer);
     const float depth = read_z_buffer(x, y, z_buffer);
+}
+
+sf::Color get_random_color() {
+    static std::random_device rd;
+    static std::mt19937 gen(rd());
+    //static std::normal_distribution<float> dist(128.0f, 28.0f);
+    static std::uniform_int_distribution dist(0, 255);
+
+    /*sf::Uint8 r = static_cast<sf::Uint8>(std::clamp(static_cast<int>(std::round(dist(gen))), 0, 255));
+    sf::Uint8 g = static_cast<sf::Uint8>(std::clamp(static_cast<int>(std::round(dist(gen))), 0, 255));
+    sf::Uint8 b = static_cast<sf::Uint8>(std::clamp(static_cast<int>(std::round(dist(gen))), 0, 255));*/
+
+    sf::Uint8 r = static_cast<sf::Uint8>(dist(gen));
+    sf::Uint8 g = static_cast<sf::Uint8>(dist(gen));
+    sf::Uint8 b = static_cast<sf::Uint8>(dist(gen));
+    return sf::Color(r, g, b);
 }
