@@ -4,6 +4,7 @@
 #include <format>
 #include <random>
 #include <algorithm>
+#include <chrono>
 
 #include <SFML/Graphics.hpp>
 
@@ -28,8 +29,22 @@ void debug_z_fighting(FrameBuffer& frame_buffer, ZBuffer& z_buffer);
 
 sf::Color get_random_color();
 
+using high_res_clock = std::chrono::high_resolution_clock;
+
 int main() {
+    sf::Font font;
+    if (!font.loadFromFile("data/fira_mono.ttf"))
+        std::cout << "sfml: font.loadFromFile() failed\n";
+
+    sf::Text fps_text;
+    fps_text.setString("fps: 0");
+    fps_text.setFont(font);
+    fps_text.setCharacterSize(16);
+    fps_text.setFillColor(sf::Color::White);
+    fps_text.setPosition(5.0f, 5.0f);
+
     sf::RenderWindow window(sf::VideoMode(w, h), "Software Renderer");
+    window.setFramerateLimit(0);
 
     sf::Texture texture;
     if (!texture.create(w, h))
@@ -48,8 +63,12 @@ int main() {
     //const std::string model_path = "data/torus/torus.obj";
     //const std::string model_path = "data/uv_sphere/uv_sphere.obj";
     //const std::string model_path = "data/skull/skull.obj";
+    //const std::string model_path = "data/blender_monkey/blender_monkey.obj";
     const std::string model_path = "data/pig/pig.obj";
     load_model(model_path, polygons);
+
+    auto measure_start = high_res_clock::now();
+    int frame_count = 0;
 
     while (window.isOpen()) {
         sf::Event event;
@@ -58,7 +77,7 @@ int main() {
                 window.close();
         }
 
-        clear_frame_buffer(sf::Color::Black, frame_buffer);
+        clear_frame_buffer(sf::Color::Blue, frame_buffer);
         clear_z_buffer(1.0f, z_buffer);
 
         //rasterize_polygons_wireframe(polygons, frame_buffer);
@@ -71,7 +90,16 @@ int main() {
 
         window.clear();
         window.draw(sprite);
+        window.draw(fps_text);
         window.display();
+
+        std::chrono::duration<float> elapsed_seconds = high_res_clock::now() - measure_start;
+        ++frame_count;
+        if (elapsed_seconds.count() >= 1.0f) {
+            fps_text.setString(std::format("fps: {}", static_cast<int>(frame_count / elapsed_seconds.count())));
+            frame_count = 0;
+            measure_start = high_res_clock::now();
+        }
     }
 
     return 0;
@@ -264,7 +292,7 @@ void debug_z_fighting(FrameBuffer& frame_buffer, ZBuffer& z_buffer) {
 sf::Color get_random_color() {
     static std::random_device rd;
     static std::mt19937 gen(rd());
-    //static std::normal_distribution<float> dist(128.0f, 28.0f);
+    //static std::normal_distribution<float> dist(128.0f, 48.0f);
     static std::uniform_int_distribution dist(0, 255);
 
     /*sf::Uint8 r = static_cast<sf::Uint8>(std::clamp(static_cast<int>(std::round(dist(gen))), 0, 255));

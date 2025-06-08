@@ -457,13 +457,15 @@ void draw_polygon_flat_shaded(Polygon polygon_screen, const Light& light, FrameB
     Vertex v2 = polygon_screen.vertices[2];
 
     // Моделируем освещение.
+    const float ambient = 32.0f; // rgb.
+    //const float ambient = 0.0f; // rgb.
     const float light_intensity = std::max(0.0f, Vec3f::dot(polygon_screen.normal, -light.dir));
     const sf::Uint8& r = polygon_screen.albedo_color.r;
     const sf::Uint8& g = polygon_screen.albedo_color.g;
     const sf::Uint8& b = polygon_screen.albedo_color.b;
-    const sf::Uint8 r_lighted = static_cast<sf::Uint8>(std::round(r * light_intensity));
-    const sf::Uint8 g_lighted = static_cast<sf::Uint8>(std::round(g * light_intensity));
-    const sf::Uint8 b_lighted = static_cast<sf::Uint8>(std::round(b * light_intensity));
+    const sf::Uint8 r_lighted = static_cast<sf::Uint8>(std::round(std::clamp((ambient * r) / 255.0f + r * light_intensity, 0.0f, 255.0f)));
+    const sf::Uint8 g_lighted = static_cast<sf::Uint8>(std::round(std::clamp((ambient * g) / 255.0f + g * light_intensity, 0.0f, 255.0f)));
+    const sf::Uint8 b_lighted = static_cast<sf::Uint8>(std::round(std::clamp((ambient * b) / 255.0f + b * light_intensity, 0.0f, 255.0f)));
     const sf::Color lighted_color{ r_lighted, g_lighted, b_lighted };
 
     // Сортируем вершины по y по возрастанию.
