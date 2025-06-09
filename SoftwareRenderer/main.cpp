@@ -150,7 +150,7 @@ void rasterize_polygons_wireframe(const std::vector<Polygon>& polygons, FrameBuf
     const Mat4f proj = Mat4f::create_perspective(fov_vert_rad, aspect_ratio, 0.1f, 10.0f);
     const Mat4f viewport = Mat4f::create_viewport(frame_buffer.w, frame_buffer.h);
 
-    for (const auto& polygon : polygons) {
+    for (const Polygon& polygon : polygons) {
         std::vector<Vertex> vertices_screen;
         for (const auto& vertex : polygon.vertices) {
             Vec4f pos{ vertex.pos };
@@ -172,7 +172,7 @@ void rasterize_polygons_solid(const std::vector<Polygon>& polygons, FrameBuffer&
     const Mat4f proj = Mat4f::create_perspective(fov_vert_rad, aspect_ratio, 0.1f, 10.0f);
     const Mat4f viewport = Mat4f::create_viewport(frame_buffer.w, frame_buffer.h);
 
-    for (const auto& polygon : polygons) {
+    for (const Polygon& polygon : polygons) {
         std::vector<Vertex> vertices_screen;
         for (const auto& vertex : polygon.vertices) {
             Vec4f pos{ vertex.pos };
@@ -194,7 +194,7 @@ void rasterize_polygons_flat_shaded(const std::vector<Polygon>& polygons, const 
     const Mat4f proj = Mat4f::create_perspective(fov_vert_rad, aspect_ratio, 0.1f, 10.0f);
     const Mat4f viewport = Mat4f::create_viewport(frame_buffer.w, frame_buffer.h);
 
-    for (const auto& polygon : polygons) {
+    for (const Polygon& polygon : polygons) {
         // Вычисляем нормаль полигона.
         const Vertex& v0 = polygon.vertices[0];
         const Vertex& v1 = polygon.vertices[1];
@@ -205,7 +205,7 @@ void rasterize_polygons_flat_shaded(const std::vector<Polygon>& polygons, const 
         const Vec3f polygon_normal = Vec3f::cross(edge1, edge2).get_normalized();
 
         std::vector<Vertex> vertices_screen;
-        for (const auto& vertex : polygon.vertices) {
+        for (const Vertex& vertex : polygon.vertices) {
             Vec4f pos{ vertex.pos };
 
             Vec4f pos_clip = proj * pos;
@@ -244,9 +244,9 @@ void debug_z_fighting(FrameBuffer& frame_buffer, ZBuffer& z_buffer) {
     const Mat4f viewport = Mat4f::create_viewport(frame_buffer.w, frame_buffer.h);
 
     std::vector<Polygon> polygons_screen;
-    for (const auto& polygon : polygons) {
+    for (const Polygon& polygon : polygons) {
         std::vector<Vertex> vertices_screen;
-        for (const auto& vertex : polygon.vertices) {
+        for (const Vertex& vertex : polygon.vertices) {
             Vec4f pos{ vertex.pos };
 
             Vec4f pos_clip = proj * pos;
