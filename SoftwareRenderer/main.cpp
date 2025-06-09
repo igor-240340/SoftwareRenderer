@@ -17,9 +17,6 @@
 
 #include "graphics.h"
 
-constexpr int w = 800;
-constexpr int h = 600;
-
 void load_model(std::string model_path, std::vector<Polygon>& polygons);
 void rasterize_polygons_wireframe(const std::vector<Polygon>& polygons, FrameBuffer& frame_buffer);
 void rasterize_polygons_solid(const std::vector<Polygon>& polygons, FrameBuffer& frame_buffer, ZBuffer& z_buffer);
@@ -32,9 +29,14 @@ sf::Color get_random_color();
 using high_res_clock = std::chrono::high_resolution_clock;
 
 int main() {
+    constexpr int w = 800;
+    constexpr int h = 600;
+
     sf::Font font;
-    if (!font.loadFromFile("data/fira_mono.ttf"))
+    if (!font.loadFromFile("data/fira_mono.ttf")) {
         std::cout << "sfml: font.loadFromFile() failed\n";
+        return 1;
+    }
 
     sf::Text fps_text;
     fps_text.setString("fps: 0");
@@ -47,8 +49,10 @@ int main() {
     window.setFramerateLimit(0);
 
     sf::Texture texture;
-    if (!texture.create(w, h))
+    if (!texture.create(w, h)) {
         std::cout << "sfml: texture.create() failed\n";
+        return 1;
+    }
     sf::Sprite sprite(texture);
 
     Light light{ Vec3f{0.0f, 0.0f, -1.0f} };
