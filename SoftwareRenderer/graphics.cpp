@@ -3,7 +3,7 @@
 
 #include "graphics.h"
 
-void draw_polygon_wireframe(Polygon polygon_screen, FrameBuffer& frame_buffer) {
+void draw_polygon_wireframe(Polygon polygon_screen, Framebuffer& framebuffer) {
     const Vec3f& v0_pos_orig = polygon_screen.vertices[0].pos;
     const Vec3f& v1_pos_orig = polygon_screen.vertices[1].pos;
     const Vec3f& v2_pos_orig = polygon_screen.vertices[2].pos;
@@ -12,37 +12,37 @@ void draw_polygon_wireframe(Polygon polygon_screen, FrameBuffer& frame_buffer) {
     Vec3f v1_pos_copy = v1_pos_orig;
     Vec3f v2_pos_copy = v2_pos_orig;
 
-    if (clip_line_coh_suth(v0_pos_copy.x, v0_pos_copy.y, v1_pos_copy.x, v1_pos_copy.y, frame_buffer)) {
+    if (clip_line_coh_suth(v0_pos_copy.x, v0_pos_copy.y, v1_pos_copy.x, v1_pos_copy.y, framebuffer)) {
         const int x0 = static_cast<int>(std::round(v0_pos_copy.x));
         const int y0 = static_cast<int>(std::round(v0_pos_copy.y));
         const int x1 = static_cast<int>(std::round(v1_pos_copy.x));
         const int y1 = static_cast<int>(std::round(v1_pos_copy.y));
-        draw_line_dda(x0, y0, x1, y1, sf::Color::White, frame_buffer);
+        draw_line_dda(x0, y0, x1, y1, sf::Color::White, framebuffer);
     }
 
     // Восстанавливаем после клиппинга.
     v0_pos_copy = v0_pos_orig;
-    if (clip_line_coh_suth(v0_pos_copy.x, v0_pos_copy.y, v2_pos_copy.x, v2_pos_copy.y, frame_buffer)) {
+    if (clip_line_coh_suth(v0_pos_copy.x, v0_pos_copy.y, v2_pos_copy.x, v2_pos_copy.y, framebuffer)) {
         const int x0 = static_cast<int>(std::round(v0_pos_copy.x));
         const int y0 = static_cast<int>(std::round(v0_pos_copy.y));
         const int x1 = static_cast<int>(std::round(v2_pos_copy.x));
         const int y1 = static_cast<int>(std::round(v2_pos_copy.y));
-        draw_line_dda(x0, y0, x1, y1, sf::Color::White, frame_buffer);
+        draw_line_dda(x0, y0, x1, y1, sf::Color::White, framebuffer);
     }
 
     // Восстанавливаем после клиппинга.
     v1_pos_copy = v1_pos_orig;
     v2_pos_copy = v2_pos_orig;
-    if (clip_line_coh_suth(v1_pos_copy.x, v1_pos_copy.y, v2_pos_copy.x, v2_pos_copy.y, frame_buffer)) {
+    if (clip_line_coh_suth(v1_pos_copy.x, v1_pos_copy.y, v2_pos_copy.x, v2_pos_copy.y, framebuffer)) {
         const int x0 = static_cast<int>(std::round(v1_pos_copy.x));
         const int y0 = static_cast<int>(std::round(v1_pos_copy.y));
         const int x1 = static_cast<int>(std::round(v2_pos_copy.x));
         const int y1 = static_cast<int>(std::round(v2_pos_copy.y));
-        draw_line_dda(x0, y0, x1, y1, sf::Color::White, frame_buffer);
+        draw_line_dda(x0, y0, x1, y1, sf::Color::White, framebuffer);
     }
 }
 
-void draw_line_dda(int x0, int y0, int x1, int y1, sf::Color color, FrameBuffer& frame_buffer) {
+void draw_line_dda(int x0, int y0, int x1, int y1, sf::Color color, Framebuffer& framebuffer) {
     // Vertical.
     if (x0 == x1) {
         // Make ascending.
@@ -50,7 +50,7 @@ void draw_line_dda(int x0, int y0, int x1, int y1, sf::Color color, FrameBuffer&
             std::swap(y0, y1);
 
         for (int y = y0; y <= y1; y++)
-            set_pixel_color(x0, y, color, frame_buffer);
+            set_pixel_color(x0, y, color, framebuffer);
     }
     // Horizontal.
     else if (y0 == y1) {
@@ -59,7 +59,7 @@ void draw_line_dda(int x0, int y0, int x1, int y1, sf::Color color, FrameBuffer&
             std::swap(x0, x1);
 
         for (int x = x0; x <= x1; x++)
-            set_pixel_color(x, y0, color, frame_buffer);
+            set_pixel_color(x, y0, color, framebuffer);
     }
 
     int dy = y1 - y0;
@@ -80,7 +80,7 @@ void draw_line_dda(int x0, int y0, int x1, int y1, sf::Color color, FrameBuffer&
         float y_accum = static_cast<float>(y0);
         for (int x = x0; x <= x1; x++) {
             int y = static_cast<int>(std::round(y_accum));
-            set_pixel_color(x, y, color, frame_buffer);
+            set_pixel_color(x, y, color, framebuffer);
             y_accum += slope;
         }
     }
@@ -99,27 +99,27 @@ void draw_line_dda(int x0, int y0, int x1, int y1, sf::Color color, FrameBuffer&
         float x_accum = static_cast<float>(x0);
         for (int y = y0; y <= y1; y++) {
             int x = static_cast<int>(std::round(x_accum));
-            set_pixel_color(x, y, color, frame_buffer);
+            set_pixel_color(x, y, color, framebuffer);
             x_accum += inv_slope;
         }
     }
 }
 
-void set_pixel_color(int x, int y, sf::Color color, FrameBuffer& frame_buffer) {
-    const int index = (y * frame_buffer.w + x) * 4;
+void set_pixel_color(int x, int y, sf::Color color, Framebuffer& framebuffer) {
+    const int index = (y * framebuffer.w + x) * 4;
 
-    frame_buffer.rgba_array[index] = color.r;
-    frame_buffer.rgba_array[index + 1] = color.g;
-    frame_buffer.rgba_array[index + 2] = color.b;
-    frame_buffer.rgba_array[index + 3] = color.a;
+    framebuffer.rgba_array[index] = color.r;
+    framebuffer.rgba_array[index + 1] = color.g;
+    framebuffer.rgba_array[index + 2] = color.b;
+    framebuffer.rgba_array[index + 3] = color.a;
 }
 
-void clear_frame_buffer(sf::Color color, FrameBuffer& frame_buffer) {
-    for (size_t i = 0; i < frame_buffer.rgba_array.size(); i += 4) {
-        frame_buffer.rgba_array[i] = color.r;
-        frame_buffer.rgba_array[i + 1] = color.g;
-        frame_buffer.rgba_array[i + 2] = color.b;
-        frame_buffer.rgba_array[i + 3] = color.a;
+void clear_framebuffer(sf::Color color, Framebuffer& framebuffer) {
+    for (size_t i = 0; i < framebuffer.rgba_array.size(); i += 4) {
+        framebuffer.rgba_array[i] = color.r;
+        framebuffer.rgba_array[i + 1] = color.g;
+        framebuffer.rgba_array[i + 2] = color.b;
+        framebuffer.rgba_array[i + 3] = color.a;
     }
 }
 
@@ -127,7 +127,7 @@ void clear_z_buffer(float depth_value, ZBuffer& z_buffer) {
     std::ranges::fill(z_buffer.depth_array, 1.0f);
 }
 
-bool clip_line_coh_suth(float& x0, float& y0, float& x1, float& y1, const FrameBuffer& frame_buffer) {
+bool clip_line_coh_suth(float& x0, float& y0, float& x1, float& y1, const Framebuffer& framebuffer) {
     enum EdgeBit {
         left = 3,
         right = 2,
@@ -143,15 +143,15 @@ bool clip_line_coh_suth(float& x0, float& y0, float& x1, float& y1, const FrameB
 
     Point p0{ x0, y0 };
     p0.region_code.set(EdgeBit::left, p0.x < 0);
-    p0.region_code.set(EdgeBit::right, p0.x > frame_buffer.w - 1);
+    p0.region_code.set(EdgeBit::right, p0.x > framebuffer.w - 1);
     p0.region_code.set(EdgeBit::top, p0.y < 0);
-    p0.region_code.set(EdgeBit::bottom, p0.y > frame_buffer.h - 1);
+    p0.region_code.set(EdgeBit::bottom, p0.y > framebuffer.h - 1);
 
     Point p1{ x1, y1 };
     p1.region_code.set(EdgeBit::left, p1.x < 0);
-    p1.region_code.set(EdgeBit::right, p1.x > frame_buffer.w - 1);
+    p1.region_code.set(EdgeBit::right, p1.x > framebuffer.w - 1);
     p1.region_code.set(EdgeBit::top, p1.y < 0);
-    p1.region_code.set(EdgeBit::bottom, p1.y > frame_buffer.h - 1);
+    p1.region_code.set(EdgeBit::bottom, p1.y > framebuffer.h - 1);
 
     bool line_inside = (p0.region_code | p1.region_code).none();
     bool line_outside = (p0.region_code & p1.region_code).any();
@@ -170,7 +170,7 @@ bool clip_line_coh_suth(float& x0, float& y0, float& x1, float& y1, const FrameB
         }
 
         if (first_edge == EdgeBit::left || first_edge == EdgeBit::right) {
-            float edge_x = first_edge == EdgeBit::left ? 0.0f : static_cast<float>(frame_buffer.w - 1);
+            float edge_x = first_edge == EdgeBit::left ? 0.0f : static_cast<float>(framebuffer.w - 1);
             float slope = (p1.y - p0.y) / (p1.x - p0.x);
 
             float x_excess = edge_x - p0.x;
@@ -178,7 +178,7 @@ bool clip_line_coh_suth(float& x0, float& y0, float& x1, float& y1, const FrameB
             p0.y += x_excess * slope;
         }
         else {
-            float edge_y = first_edge == EdgeBit::top ? 0.0f : static_cast<float>(frame_buffer.h - 1);
+            float edge_y = first_edge == EdgeBit::top ? 0.0f : static_cast<float>(framebuffer.h - 1);
             float inv_slope = (p1.x - p0.x) / (p1.y - p0.y);
 
             float y_excess = edge_y - p0.y;
@@ -187,9 +187,9 @@ bool clip_line_coh_suth(float& x0, float& y0, float& x1, float& y1, const FrameB
         }
 
         p0.region_code.set(EdgeBit::left, p0.x < 0);
-        p0.region_code.set(EdgeBit::right, p0.x > frame_buffer.w - 1);
+        p0.region_code.set(EdgeBit::right, p0.x > framebuffer.w - 1);
         p0.region_code.set(EdgeBit::top, p0.y < 0);
-        p0.region_code.set(EdgeBit::bottom, p0.y > frame_buffer.h - 1);
+        p0.region_code.set(EdgeBit::bottom, p0.y > framebuffer.h - 1);
 
         line_inside = (p0.region_code | p1.region_code).none();
         line_outside = (p0.region_code & p1.region_code).any();
@@ -203,7 +203,7 @@ bool clip_line_coh_suth(float& x0, float& y0, float& x1, float& y1, const FrameB
     return line_inside;
 }
 
-void draw_polygon_solid(Polygon polygon_screen, FrameBuffer& frame_buffer, ZBuffer& z_buffer) {
+void draw_polygon_solid(Polygon polygon_screen, Framebuffer& framebuffer, ZBuffer& z_buffer) {
     Vertex v0 = polygon_screen.vertices[0];
     Vertex v1 = polygon_screen.vertices[1];
     Vertex v2 = polygon_screen.vertices[2];
@@ -220,7 +220,7 @@ void draw_polygon_solid(Polygon polygon_screen, FrameBuffer& frame_buffer, ZBuff
     // NOTE: Нет смысла исключать ноль для верхней границы, поскольку в итоге все-равно
     // получим ceil(0)-1 для y-координаты нижней скан-линии и растеризации не будет.
     // Для нижней же границы ноль нужно исключить, чтобы не было пропуска пикселов по нижней стороне смежного треугольника.
-    if (v2.pos.y <= 0.0f || v0.pos.y > (frame_buffer.h - 1))
+    if (v2.pos.y <= 0.0f || v0.pos.y > (framebuffer.h - 1))
         return;
 
     // Trivial reject по левой границе.
@@ -231,7 +231,7 @@ void draw_polygon_solid(Polygon polygon_screen, FrameBuffer& frame_buffer, ZBuff
 
     // Trivial reject по правой границе.
     // NOTE: Важно исключить ноль, чтобы не было пропуска пикселов по правой стороне смежного треугольника.
-    if ((v0.pos.x > (frame_buffer.w - 1)) && (v1.pos.x > (frame_buffer.w - 1)) && (v2.pos.x > (frame_buffer.w - 1)))
+    if ((v0.pos.x > (framebuffer.w - 1)) && (v1.pos.x > (framebuffer.w - 1)) && (v2.pos.x > (framebuffer.w - 1)))
         return;
 
     // Классифицируем треугольник.
@@ -241,9 +241,9 @@ void draw_polygon_solid(Polygon polygon_screen, FrameBuffer& frame_buffer, ZBuff
     const bool flat_bottom = (v1.pos.y == v2.pos.y);
     const bool flat_top = (v0.pos.y == v1.pos.y);
     if (flat_bottom)
-        draw_flat_bottom_polygon_solid(Polygon{ {v0, v1, v2}, polygon_screen.albedo_color }, frame_buffer, z_buffer);
+        draw_flat_bottom_polygon_solid(Polygon{ {v0, v1, v2}, polygon_screen.albedo_color }, framebuffer, z_buffer);
     else if (flat_top)
-        draw_flat_top_polygon_solid(Polygon{ {v0, v1, v2}, polygon_screen.albedo_color }, frame_buffer, z_buffer);
+        draw_flat_top_polygon_solid(Polygon{ {v0, v1, v2}, polygon_screen.albedo_color }, framebuffer, z_buffer);
     else { // Разделяем треугольник на flat_bottom и flat_top.
         const float inv_slope = (v2.pos.x - v0.pos.x) / (v2.pos.y - v0.pos.y); // Наклон самого длинного ребра.
         const float height_top_triangle = v1.pos.y - v0.pos.y;
@@ -258,12 +258,12 @@ void draw_polygon_solid(Polygon polygon_screen, FrameBuffer& frame_buffer, ZBuff
 
         Vertex intersect{ {intersect_x, intersect_y, intersect_z} };
 
-        draw_flat_bottom_polygon_solid(Polygon{ {v0, intersect, v1}, polygon_screen.albedo_color }, frame_buffer, z_buffer);
-        draw_flat_top_polygon_solid(Polygon{ {intersect, v1, v2}, polygon_screen.albedo_color }, frame_buffer, z_buffer);
+        draw_flat_bottom_polygon_solid(Polygon{ {v0, intersect, v1}, polygon_screen.albedo_color }, framebuffer, z_buffer);
+        draw_flat_top_polygon_solid(Polygon{ {intersect, v1, v2}, polygon_screen.albedo_color }, framebuffer, z_buffer);
     }
 }
 
-void draw_flat_bottom_polygon_solid(Polygon polygon_screen, FrameBuffer& frame_buffer, ZBuffer& z_buffer) {
+void draw_flat_bottom_polygon_solid(Polygon polygon_screen, Framebuffer& framebuffer, ZBuffer& z_buffer) {
     Vertex v0 = polygon_screen.vertices[0];
     Vertex v1 = polygon_screen.vertices[1];
     Vertex v2 = polygon_screen.vertices[2];
@@ -322,15 +322,15 @@ void draw_flat_bottom_polygon_solid(Polygon polygon_screen, FrameBuffer& frame_b
     // то первая скан-линия смежного flat_top треугольника должна определяться по правой верхней,
     // чтобы не было ни пропуска скан-линии ни наложения.
     int y_end = static_cast<int>(std::ceil(v2.pos.y) - 1);
-    if (v2.pos.y > frame_buffer.h)
-        y_end = frame_buffer.h - 1;
+    if (v2.pos.y > framebuffer.h)
+        y_end = framebuffer.h - 1;
 
     for (int y = y_start; y <= y_end; y++) {
         // Вычисляем целочисленные значения начала и конца текущей скан-линии, следуя правилу top-left.
         // Если начало скан-линии находится за левой границей окна, прижимаем к нулю.
         // Если конец скан-линии находится за правой границей окна плюс один пиксел, то прижимаем к правой границе.
         const int scan_line_start_int = (scan_line_start < 0.0f) ? 0 : static_cast<int>(std::ceil(scan_line_start));
-        const int scan_line_end_int = (scan_line_end > frame_buffer.w) ? (frame_buffer.w - 1) : static_cast<int>(std::ceil(scan_line_end) - 1);
+        const int scan_line_end_int = (scan_line_end > framebuffer.w) ? (framebuffer.w - 1) : static_cast<int>(std::ceil(scan_line_end) - 1);
 
         // Интерполируем z-атрибут начала текущей скан-линии с учетом перехода к целочисленным координатам.
         // NOTE: Интерполяция конца скан-линии не требуется, поскольку мы получим корректный z-атрибут
@@ -340,7 +340,7 @@ void draw_flat_bottom_polygon_solid(Polygon polygon_screen, FrameBuffer& frame_b
         cur_frag_z += z_slope_horiz * scan_line_start_delta;
         for (int x = scan_line_start_int; x <= scan_line_end_int; x++) {
             if (perform_depth_test(x, y, cur_frag_z, z_buffer))
-                set_pixel_color(x, y, polygon_screen.albedo_color, frame_buffer);
+                set_pixel_color(x, y, polygon_screen.albedo_color, framebuffer);
 
             cur_frag_z += z_slope_horiz;
         }
@@ -354,7 +354,7 @@ void draw_flat_bottom_polygon_solid(Polygon polygon_screen, FrameBuffer& frame_b
     }
 }
 
-void draw_flat_top_polygon_solid(Polygon polygon_screen, FrameBuffer& frame_buffer, ZBuffer& z_buffer) {
+void draw_flat_top_polygon_solid(Polygon polygon_screen, Framebuffer& framebuffer, ZBuffer& z_buffer) {
     Vertex v0 = polygon_screen.vertices[0];
     Vertex v1 = polygon_screen.vertices[1];
     Vertex v2 = polygon_screen.vertices[2];
@@ -411,15 +411,15 @@ void draw_flat_top_polygon_solid(Polygon polygon_screen, FrameBuffer& frame_buff
     }
 
     int y_end = static_cast<int>(std::ceil(v2.pos.y) - 1);
-    if (v2.pos.y > frame_buffer.h)
-        y_end = frame_buffer.h - 1;
+    if (v2.pos.y > framebuffer.h)
+        y_end = framebuffer.h - 1;
 
     for (int y = y_start; y <= y_end; y++) {
         // Вычисляем целочисленные значения начала и конца текущей скан-линии, следуя правилу top-left.
         // Если начало скан-линии находится за левой границей окна, прижимаем к нулю.
         // Если конец скан-линии находится за правой границей окна плюс один пиксел, то прижимаем к правой границе.
         const int scan_line_start_int = (scan_line_start < 0.0f) ? 0 : static_cast<int>(std::ceil(scan_line_start));
-        const int scan_line_end_int = (scan_line_end > frame_buffer.w) ? (frame_buffer.w - 1) : static_cast<int>(std::ceil(scan_line_end) - 1);
+        const int scan_line_end_int = (scan_line_end > framebuffer.w) ? (framebuffer.w - 1) : static_cast<int>(std::ceil(scan_line_end) - 1);
 
         // Интерполируем цвет начала текущей скан-линии с учетом перехода к целочисленным координатам.
         float cur_frag_z = scan_line_start_z;
@@ -427,7 +427,7 @@ void draw_flat_top_polygon_solid(Polygon polygon_screen, FrameBuffer& frame_buff
         cur_frag_z += z_slope_horiz * scan_line_start_delta;
         for (int x = scan_line_start_int; x <= scan_line_end_int; x++) {
             if (perform_depth_test(x, y, cur_frag_z, z_buffer))
-                set_pixel_color(x, y, polygon_screen.albedo_color, frame_buffer);
+                set_pixel_color(x, y, polygon_screen.albedo_color, framebuffer);
 
             cur_frag_z += z_slope_horiz;
         }
@@ -451,7 +451,7 @@ bool perform_depth_test(int frag_x, int frag_y, float frag_z, ZBuffer& z_buffer)
     return false;
 }
 
-void draw_polygon_flat_shaded(Polygon polygon_screen, const Light& light, FrameBuffer& frame_buffer, ZBuffer& z_buffer) {
+void draw_polygon_flat_shaded(Polygon polygon_screen, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer) {
     Vertex v0 = polygon_screen.vertices[0];
     Vertex v1 = polygon_screen.vertices[1];
     Vertex v2 = polygon_screen.vertices[2];
@@ -480,7 +480,7 @@ void draw_polygon_flat_shaded(Polygon polygon_screen, const Light& light, FrameB
     // NOTE: Нет смысла исключать ноль для верхней границы, поскольку в итоге все-равно
     // получим ceil(0)-1 для y-координаты нижней скан-линии и растеризации не будет.
     // Для нижней же границы ноль нужно исключить, чтобы не было пропуска пикселов по нижней стороне смежного треугольника.
-    if (v2.pos.y <= 0.0f || v0.pos.y > (frame_buffer.h - 1))
+    if (v2.pos.y <= 0.0f || v0.pos.y > (framebuffer.h - 1))
         return;
 
     // Trivial reject по левой границе.
@@ -491,7 +491,7 @@ void draw_polygon_flat_shaded(Polygon polygon_screen, const Light& light, FrameB
 
     // Trivial reject по правой границе.
     // NOTE: Важно исключить ноль, чтобы не было пропуска пикселов по правой стороне смежного треугольника.
-    if ((v0.pos.x > (frame_buffer.w - 1)) && (v1.pos.x > (frame_buffer.w - 1)) && (v2.pos.x > (frame_buffer.w - 1)))
+    if ((v0.pos.x > (framebuffer.w - 1)) && (v1.pos.x > (framebuffer.w - 1)) && (v2.pos.x > (framebuffer.w - 1)))
         return;
 
     // Классифицируем треугольник.
@@ -501,9 +501,9 @@ void draw_polygon_flat_shaded(Polygon polygon_screen, const Light& light, FrameB
     const bool flat_bottom = (v1.pos.y == v2.pos.y);
     const bool flat_top = (v0.pos.y == v1.pos.y);
     if (flat_bottom)
-        draw_flat_bottom_polygon_solid(Polygon{ {v0, v1, v2}, lighted_color }, frame_buffer, z_buffer);
+        draw_flat_bottom_polygon_solid(Polygon{ {v0, v1, v2}, lighted_color }, framebuffer, z_buffer);
     else if (flat_top)
-        draw_flat_top_polygon_solid(Polygon{ {v0, v1, v2}, lighted_color }, frame_buffer, z_buffer);
+        draw_flat_top_polygon_solid(Polygon{ {v0, v1, v2}, lighted_color }, framebuffer, z_buffer);
     else { // Разделяем треугольник на flat_bottom и flat_top.
         const float inv_slope = (v2.pos.x - v0.pos.x) / (v2.pos.y - v0.pos.y); // Наклон самого длинного ребра.
         const float height_top_triangle = v1.pos.y - v0.pos.y;
@@ -518,12 +518,12 @@ void draw_polygon_flat_shaded(Polygon polygon_screen, const Light& light, FrameB
 
         Vertex intersect{ {intersect_x, intersect_y, intersect_z} };
 
-        draw_flat_bottom_polygon_solid(Polygon{ {v0, intersect, v1}, lighted_color }, frame_buffer, z_buffer);
-        draw_flat_top_polygon_solid(Polygon{ {intersect, v1, v2}, lighted_color }, frame_buffer, z_buffer);
+        draw_flat_bottom_polygon_solid(Polygon{ {v0, intersect, v1}, lighted_color }, framebuffer, z_buffer);
+        draw_flat_top_polygon_solid(Polygon{ {intersect, v1, v2}, lighted_color }, framebuffer, z_buffer);
     }
 }
 
-void draw_flat_bottom_polygon_flat_shaded(Polygon polygon_screen, FrameBuffer& frame_buffer, ZBuffer& z_buffer) {
+void draw_flat_bottom_polygon_flat_shaded(Polygon polygon_screen, Framebuffer& framebuffer, ZBuffer& z_buffer) {
     Vertex v0 = polygon_screen.vertices[0];
     Vertex v1 = polygon_screen.vertices[1];
     Vertex v2 = polygon_screen.vertices[2];
@@ -582,15 +582,15 @@ void draw_flat_bottom_polygon_flat_shaded(Polygon polygon_screen, FrameBuffer& f
     // то первая скан-линия смежного flat_top треугольника должна определяться по правой верхней,
     // чтобы не было ни пропуска скан-линии ни наложения.
     int y_end = static_cast<int>(std::ceil(v2.pos.y) - 1);
-    if (v2.pos.y > frame_buffer.h)
-        y_end = frame_buffer.h - 1;
+    if (v2.pos.y > framebuffer.h)
+        y_end = framebuffer.h - 1;
 
     for (int y = y_start; y <= y_end; y++) {
         // Вычисляем целочисленные значения начала и конца текущей скан-линии, следуя правилу top-left.
         // Если начало скан-линии находится за левой границей окна, прижимаем к нулю.
         // Если конец скан-линии находится за правой границей окна плюс один пиксел, то прижимаем к правой границе.
         const int scan_line_start_int = (scan_line_start < 0.0f) ? 0 : static_cast<int>(std::ceil(scan_line_start));
-        const int scan_line_end_int = (scan_line_end > frame_buffer.w) ? (frame_buffer.w - 1) : static_cast<int>(std::ceil(scan_line_end) - 1);
+        const int scan_line_end_int = (scan_line_end > framebuffer.w) ? (framebuffer.w - 1) : static_cast<int>(std::ceil(scan_line_end) - 1);
 
         // Интерполируем z-атрибут начала текущей скан-линии с учетом перехода к целочисленным координатам.
         // NOTE: Интерполяция конца скан-линии не требуется, поскольку мы получим корректный z-атрибут
@@ -600,7 +600,7 @@ void draw_flat_bottom_polygon_flat_shaded(Polygon polygon_screen, FrameBuffer& f
         cur_frag_z += z_slope_horiz * scan_line_start_delta;
         for (int x = scan_line_start_int; x <= scan_line_end_int; x++) {
             if (perform_depth_test(x, y, cur_frag_z, z_buffer))
-                set_pixel_color(x, y, polygon_screen.albedo_color, frame_buffer);
+                set_pixel_color(x, y, polygon_screen.albedo_color, framebuffer);
 
             cur_frag_z += z_slope_horiz;
         }
@@ -614,7 +614,7 @@ void draw_flat_bottom_polygon_flat_shaded(Polygon polygon_screen, FrameBuffer& f
     }
 }
 
-void draw_flat_top_polygon_flat_shaded(Polygon polygon_screen, FrameBuffer& frame_buffer, ZBuffer& z_buffer) {
+void draw_flat_top_polygon_flat_shaded(Polygon polygon_screen, Framebuffer& framebuffer, ZBuffer& z_buffer) {
     Vertex v0 = polygon_screen.vertices[0];
     Vertex v1 = polygon_screen.vertices[1];
     Vertex v2 = polygon_screen.vertices[2];
@@ -671,15 +671,15 @@ void draw_flat_top_polygon_flat_shaded(Polygon polygon_screen, FrameBuffer& fram
     }
 
     int y_end = static_cast<int>(std::ceil(v2.pos.y) - 1);
-    if (v2.pos.y > frame_buffer.h)
-        y_end = frame_buffer.h - 1;
+    if (v2.pos.y > framebuffer.h)
+        y_end = framebuffer.h - 1;
 
     for (int y = y_start; y <= y_end; y++) {
         // Вычисляем целочисленные значения начала и конца текущей скан-линии, следуя правилу top-left.
         // Если начало скан-линии находится за левой границей окна, прижимаем к нулю.
         // Если конец скан-линии находится за правой границей окна плюс один пиксел, то прижимаем к правой границе.
         const int scan_line_start_int = (scan_line_start < 0.0f) ? 0 : static_cast<int>(std::ceil(scan_line_start));
-        const int scan_line_end_int = (scan_line_end > frame_buffer.w) ? (frame_buffer.w - 1) : static_cast<int>(std::ceil(scan_line_end) - 1);
+        const int scan_line_end_int = (scan_line_end > framebuffer.w) ? (framebuffer.w - 1) : static_cast<int>(std::ceil(scan_line_end) - 1);
 
         // Интерполируем цвет начала текущей скан-линии с учетом перехода к целочисленным координатам.
         float cur_frag_z = scan_line_start_z;
@@ -687,7 +687,7 @@ void draw_flat_top_polygon_flat_shaded(Polygon polygon_screen, FrameBuffer& fram
         cur_frag_z += z_slope_horiz * scan_line_start_delta;
         for (int x = scan_line_start_int; x <= scan_line_end_int; x++) {
             if (perform_depth_test(x, y, cur_frag_z, z_buffer))
-                set_pixel_color(x, y, polygon_screen.albedo_color, frame_buffer);
+                set_pixel_color(x, y, polygon_screen.albedo_color, framebuffer);
 
             cur_frag_z += z_slope_horiz;
         }
@@ -701,13 +701,13 @@ void draw_flat_top_polygon_flat_shaded(Polygon polygon_screen, FrameBuffer& fram
     }
 }
 
-sf::Color read_frame_buffer(int x, int y, const FrameBuffer& frame_buffer) {
-    const int index = (frame_buffer.w * y + x) * 4;
+sf::Color read_framebuffer(int x, int y, const Framebuffer& framebuffer) {
+    const int index = (framebuffer.w * y + x) * 4;
 
-    const sf::Uint8 r = frame_buffer.rgba_array[index];
-    const sf::Uint8 g = frame_buffer.rgba_array[index + 1];
-    const sf::Uint8 b = frame_buffer.rgba_array[index + 2];
-    const sf::Uint8 a = frame_buffer.rgba_array[index + 3];
+    const sf::Uint8 r = framebuffer.rgba_array[index];
+    const sf::Uint8 g = framebuffer.rgba_array[index + 1];
+    const sf::Uint8 b = framebuffer.rgba_array[index + 2];
+    const sf::Uint8 a = framebuffer.rgba_array[index + 3];
 
     return sf::Color(r, g, b, a);
 }

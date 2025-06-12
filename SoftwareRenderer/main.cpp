@@ -18,11 +18,11 @@
 #include "graphics.h"
 
 void load_model(std::string model_path, std::vector<Polygon>& polygons);
-void rasterize_polygons_wireframe(const std::vector<Polygon>& polygons, FrameBuffer& frame_buffer);
-void rasterize_polygons_solid(const std::vector<Polygon>& polygons, FrameBuffer& frame_buffer, ZBuffer& z_buffer);
-void rasterize_polygons_flat_shaded(const std::vector<Polygon>& polygons, const Light& light, FrameBuffer& frame_buffer, ZBuffer& z_buffer);
+void rasterize_polygons_wireframe(const std::vector<Polygon>& polygons, Framebuffer& framebuffer);
+void rasterize_polygons_solid(const std::vector<Polygon>& polygons, Framebuffer& framebuffer, ZBuffer& z_buffer);
+void rasterize_polygons_flat_shaded(const std::vector<Polygon>& polygons, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer);
 
-void debug_z_fighting(FrameBuffer& frame_buffer, ZBuffer& z_buffer);
+void debug_z_fighting(Framebuffer& frame_buffer, ZBuffer& z_buffer);
 
 sf::Color get_random_color();
 
@@ -56,7 +56,7 @@ int main() {
     sf::Sprite sprite(texture);
 
     Light light{ Vec3f{0.0f, 0.0f, -1.0f} };
-    FrameBuffer frame_buffer{ w, h, std::vector<sf::Uint8>(w * h * 4) };
+    Framebuffer frame_buffer{ w, h, std::vector<sf::Uint8>(w * h * 4) };
     ZBuffer z_buffer{ w, h, std::vector<float>(w * h) };
 
     std::vector<Polygon> polygons;
@@ -81,7 +81,7 @@ int main() {
                 window.close();
         }
 
-        clear_frame_buffer(sf::Color::Blue, frame_buffer);
+        clear_framebuffer(sf::Color::Blue, frame_buffer);
         clear_z_buffer(1.0f, z_buffer);
 
         //rasterize_polygons_wireframe(polygons, frame_buffer);
@@ -148,11 +148,11 @@ void load_model(std::string model_path, std::vector<Polygon>& polygons) {
     }
 }
 
-void rasterize_polygons_wireframe(const std::vector<Polygon>& polygons, FrameBuffer& frame_buffer) {
+void rasterize_polygons_wireframe(const std::vector<Polygon>& polygons, Framebuffer& framebuffer) {
     const float fov_vert_rad = static_cast<float>(45.0 * (std::numbers::pi / 180.0));
-    const float aspect_ratio = static_cast<float>(frame_buffer.w) / frame_buffer.h;
+    const float aspect_ratio = static_cast<float>(framebuffer.w) / framebuffer.h;
     const Mat4f proj = Mat4f::create_perspective(fov_vert_rad, aspect_ratio, 0.1f, 10.0f);
-    const Mat4f viewport = Mat4f::create_viewport(frame_buffer.w, frame_buffer.h);
+    const Mat4f viewport = Mat4f::create_viewport(framebuffer.w, framebuffer.h);
 
     for (const Polygon& polygon : polygons) {
         std::vector<Vertex> vertices_screen;
@@ -166,15 +166,15 @@ void rasterize_polygons_wireframe(const std::vector<Polygon>& polygons, FrameBuf
             vertices_screen.push_back(Vertex{ Vec3f{pos_screen} });
         }
         Polygon polygon_screen{ {vertices_screen[0], vertices_screen[1], vertices_screen[2]} };
-        draw_polygon_wireframe(polygon_screen, frame_buffer);
+        draw_polygon_wireframe(polygon_screen, framebuffer);
     }
 }
 
-void rasterize_polygons_solid(const std::vector<Polygon>& polygons, FrameBuffer& frame_buffer, ZBuffer& z_buffer) {
+void rasterize_polygons_solid(const std::vector<Polygon>& polygons, Framebuffer& framebuffer, ZBuffer& z_buffer) {
     const float fov_vert_rad = static_cast<float>(45.0 * (std::numbers::pi / 180.0));
-    const float aspect_ratio = static_cast<float>(frame_buffer.w) / frame_buffer.h;
+    const float aspect_ratio = static_cast<float>(framebuffer.w) / framebuffer.h;
     const Mat4f proj = Mat4f::create_perspective(fov_vert_rad, aspect_ratio, 0.1f, 10.0f);
-    const Mat4f viewport = Mat4f::create_viewport(frame_buffer.w, frame_buffer.h);
+    const Mat4f viewport = Mat4f::create_viewport(framebuffer.w, framebuffer.h);
 
     for (const Polygon& polygon : polygons) {
         std::vector<Vertex> vertices_screen;
@@ -188,15 +188,15 @@ void rasterize_polygons_solid(const std::vector<Polygon>& polygons, FrameBuffer&
             vertices_screen.push_back(Vertex{ Vec3f{pos_screen} });
         }
         Polygon polygon_screen{ {vertices_screen[0], vertices_screen[1], vertices_screen[2]}, polygon.albedo_color };
-        draw_polygon_solid(polygon_screen, frame_buffer, z_buffer);
+        draw_polygon_solid(polygon_screen, framebuffer, z_buffer);
     }
 }
 
-void rasterize_polygons_flat_shaded(const std::vector<Polygon>& polygons, const Light& light, FrameBuffer& frame_buffer, ZBuffer& z_buffer) {
+void rasterize_polygons_flat_shaded(const std::vector<Polygon>& polygons, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer) {
     const float fov_vert_rad = static_cast<float>(45.0 * (std::numbers::pi / 180.0));
-    const float aspect_ratio = static_cast<float>(frame_buffer.w) / frame_buffer.h;
+    const float aspect_ratio = static_cast<float>(framebuffer.w) / framebuffer.h;
     const Mat4f proj = Mat4f::create_perspective(fov_vert_rad, aspect_ratio, 0.1f, 10.0f);
-    const Mat4f viewport = Mat4f::create_viewport(frame_buffer.w, frame_buffer.h);
+    const Mat4f viewport = Mat4f::create_viewport(framebuffer.w, framebuffer.h);
 
     for (const Polygon& polygon : polygons) {
         // Вычисляем нормаль полигона.
@@ -224,7 +224,7 @@ void rasterize_polygons_flat_shaded(const std::vector<Polygon>& polygons, const 
             polygon.albedo_color,
             polygon_normal
         };
-        draw_polygon_flat_shaded(polygon_screen, light, frame_buffer, z_buffer);
+        draw_polygon_flat_shaded(polygon_screen, light, framebuffer, z_buffer);
     }
 }
 
@@ -237,15 +237,15 @@ void rasterize_polygons_flat_shaded(const std::vector<Polygon>& polygons, const 
 // Возможные решения:
 // - Depth Bias.
 // - Back-face culling.
-void debug_z_fighting(FrameBuffer& frame_buffer, ZBuffer& z_buffer) {
+void debug_z_fighting(Framebuffer& framebuffer, ZBuffer& z_buffer) {
     std::vector<Polygon> polygons;
     const std::string model_path = "data/box/box.obj";
     load_model(model_path, polygons);
 
     const float fov_vert_rad = static_cast<float>(45.0 * (std::numbers::pi / 180.0));
-    const float aspect_ratio = static_cast<float>(frame_buffer.w) / frame_buffer.h;
+    const float aspect_ratio = static_cast<float>(framebuffer.w) / framebuffer.h;
     const Mat4f proj = Mat4f::create_perspective(fov_vert_rad, aspect_ratio, 0.1f, 10.0f);
-    const Mat4f viewport = Mat4f::create_viewport(frame_buffer.w, frame_buffer.h);
+    const Mat4f viewport = Mat4f::create_viewport(framebuffer.w, framebuffer.h);
 
     std::vector<Polygon> polygons_screen;
     for (const Polygon& polygon : polygons) {
@@ -263,18 +263,18 @@ void debug_z_fighting(FrameBuffer& frame_buffer, ZBuffer& z_buffer) {
         polygons_screen.push_back(polygon_screen);
     }
 
-    //draw_polygon_solid(polygons_screen[0], frame_buffer, z_buffer);
-    //draw_polygon_solid(polygons_screen[1], frame_buffer, z_buffer);
-    //draw_polygon_solid(polygons_screen[2], frame_buffer, z_buffer);
-    //draw_polygon_solid(polygons_screen[3], frame_buffer, z_buffer);
-    //draw_polygon_solid(polygons_screen[4], frame_buffer, z_buffer);
-    //draw_polygon_solid(polygons_screen[5], frame_buffer, z_buffer);
-    //draw_polygon_solid(polygons_screen[6], frame_buffer, z_buffer);
-    //draw_polygon_solid(polygons_screen[7], frame_buffer, z_buffer);
-    //draw_polygon_solid(polygons_screen[8], frame_buffer, z_buffer);
-    //draw_polygon_solid(polygons_screen[9], frame_buffer, z_buffer);
-    //draw_polygon_solid(polygons_screen[10], frame_buffer, z_buffer);
-    //draw_polygon_solid(polygons_screen[11], frame_buffer, z_buffer);
+    /*draw_polygon_solid(polygons_screen[0], framebuffer, z_buffer);
+    draw_polygon_solid(polygons_screen[1], framebuffer, z_buffer);
+    draw_polygon_solid(polygons_screen[2], framebuffer, z_buffer);
+    draw_polygon_solid(polygons_screen[3], framebuffer, z_buffer);
+    draw_polygon_solid(polygons_screen[4], framebuffer, z_buffer);
+    draw_polygon_solid(polygons_screen[5], framebuffer, z_buffer);
+    draw_polygon_solid(polygons_screen[6], framebuffer, z_buffer);
+    draw_polygon_solid(polygons_screen[7], framebuffer, z_buffer);
+    draw_polygon_solid(polygons_screen[8], framebuffer, z_buffer);
+    draw_polygon_solid(polygons_screen[9], framebuffer, z_buffer);
+    draw_polygon_solid(polygons_screen[10], framebuffer, z_buffer);
+    draw_polygon_solid(polygons_screen[11], framebuffer, z_buffer);*/
 
     polygons_screen[7].albedo_color = sf::Color::Blue; // Стоит.
     polygons_screen[9].albedo_color = sf::Color::Red; // Лежит.
@@ -284,12 +284,12 @@ void debug_z_fighting(FrameBuffer& frame_buffer, ZBuffer& z_buffer) {
     polygons_screen[9].vertices[1].pos.z += 1e-6f;
     polygons_screen[9].vertices[2].pos.z += 1e-6f;
 
-    draw_polygon_solid(polygons_screen[7], frame_buffer, z_buffer);
-    draw_polygon_solid(polygons_screen[9], frame_buffer, z_buffer);
+    draw_polygon_solid(polygons_screen[7], framebuffer, z_buffer);
+    draw_polygon_solid(polygons_screen[9], framebuffer, z_buffer);
 
     const int x = 384;
     const int y = 488;
-    const sf::Color color = read_frame_buffer(x, y, frame_buffer);
+    const sf::Color color = read_framebuffer(x, y, framebuffer);
     const float depth = read_z_buffer(x, y, z_buffer);
 }
 
