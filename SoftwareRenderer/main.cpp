@@ -113,7 +113,7 @@ void load_model(std::string model_path, std::vector<Polygon>& polygons) {
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> shapes;
     std::vector<tinyobj::material_t> materials;
-    std::string warn, err;
+    std::string err;
 
     if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &err, model_path.c_str()))
         std::cout << "tinyobjloader: " << err << '\n';
