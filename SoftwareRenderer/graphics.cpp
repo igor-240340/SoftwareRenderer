@@ -421,7 +421,7 @@ void draw_flat_top_polygon_solid(Polygon polygon_screen, Framebuffer& framebuffe
         const int scan_line_start_int = (scan_line_start < 0.0f) ? 0 : static_cast<int>(std::ceil(scan_line_start));
         const int scan_line_end_int = (scan_line_end > framebuffer.w) ? (framebuffer.w - 1) : static_cast<int>(std::ceil(scan_line_end) - 1);
 
-        // Интерполируем цвет начала текущей скан-линии с учетом перехода к целочисленным координатам.
+        // Интерполируем z начала текущей скан-линии с учетом перехода к целочисленным координатам.
         float cur_frag_z = scan_line_start_z;
         const float scan_line_start_delta = static_cast<float>(scan_line_start_int) - scan_line_start;
         cur_frag_z += z_slope_horiz * scan_line_start_delta;
@@ -681,7 +681,7 @@ void draw_flat_top_polygon_flat_shaded(Polygon polygon_screen, Framebuffer& fram
         const int scan_line_start_int = (scan_line_start < 0.0f) ? 0 : static_cast<int>(std::ceil(scan_line_start));
         const int scan_line_end_int = (scan_line_end > framebuffer.w) ? (framebuffer.w - 1) : static_cast<int>(std::ceil(scan_line_end) - 1);
 
-        // Интерполируем цвет начала текущей скан-линии с учетом перехода к целочисленным координатам.
+        // Интерполируем z начала текущей скан-линии с учетом перехода к целочисленным координатам.
         float cur_frag_z = scan_line_start_z;
         const float scan_line_start_delta = static_cast<float>(scan_line_start_int) - scan_line_start;
         cur_frag_z += z_slope_horiz * scan_line_start_delta;
