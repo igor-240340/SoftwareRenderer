@@ -7,18 +7,18 @@
 Mat4f::Mat4f() {
     std::fill(data.begin(), data.end(), 0.0f);
 
-    data.at(0) = 1.0f;
-    data.at(5) = 1.0f;
-    data.at(10) = 1.0f;
-    data.at(15) = 1.0f;
+    data[0] = 1.0f;
+    data[5] = 1.0f;
+    data[10] = 1.0f;
+    data[15] = 1.0f;
 }
 
 Vec4f Mat4f::operator*(const Vec4f& vec) const {
     return Vec4f(
-        data.at(0) * vec.x + data.at(4) * vec.y + data.at(8) * vec.z + data.at(12) * vec.w,
-        data.at(1) * vec.x + data.at(5) * vec.y + data.at(9) * vec.z + data.at(13) * vec.w,
-        data.at(2) * vec.x + data.at(6) * vec.y + data.at(10) * vec.z + data.at(14) * vec.w,
-        data.at(3) * vec.x + data.at(7) * vec.y + data.at(11) * vec.z + data.at(15) * vec.w
+        data[0] * vec.x + data[4] * vec.y + data[8] * vec.z + data[12] * vec.w,
+        data[1] * vec.x + data[5] * vec.y + data[9] * vec.z + data[13] * vec.w,
+        data[2] * vec.x + data[6] * vec.y + data[10] * vec.z + data[14] * vec.w,
+        data[3] * vec.x + data[7] * vec.y + data[11] * vec.z + data[15] * vec.w
     );
 }
 
@@ -26,19 +26,35 @@ Mat4f Mat4f::create_identity() {
     return Mat4f{};
 }
 
+// NOTE: Вывод см. в /docs/persp_proj_mat_2/persp_proj.mcdx.
 Mat4f Mat4f::create_perspective(float fov_vert_rad, float aspect_ratio, float near, float far) {
     Mat4f mat_proj{};
 
-    mat_proj.data.at(0) = 1.0f / (aspect_ratio * std::tanf(fov_vert_rad / 2.0f));
-    mat_proj.data.at(5) = 1.0f / std::tanf(fov_vert_rad / 2.0f);
-    mat_proj.data.at(10) = -far / (far - near);
-    mat_proj.data.at(11) = -1.0f;
-    mat_proj.data.at(14) = -(far * near) / (far - near);
-    mat_proj.data.at(15) = 0.0f;
+    mat_proj.data[0] = 1.0f / (aspect_ratio * std::tanf(fov_vert_rad / 2.0f));
+    mat_proj.data[5] = 1.0f / std::tanf(fov_vert_rad / 2.0f);
+    mat_proj.data[10] = -far / (far - near);
+    mat_proj.data[11] = -1.0f;
+    mat_proj.data[14] = -(far * near) / (far - near);
+    mat_proj.data[15] = 0.0f;
 
     return mat_proj;
 }
 
+// NOTE: Вывод см. в /docs/ortho_proj/ortho_proj.mcdx.
+Mat4f Mat4f::create_ortho(float left, float right, float bottom, float top, float near, float far) {
+    Mat4f mat_proj{};
+
+    mat_proj.data[0] = 2.0f / (right - left);
+    mat_proj.data[5] = 2.0f / (top - bottom);
+    mat_proj.data[10] = -1.0f / (far - near);
+    mat_proj.data[12] = -(right + left) / (right - left);
+    mat_proj.data[13] = -(top + bottom) / (top - bottom);
+    mat_proj.data[14] = -near / (far - near);
+
+    return mat_proj;
+}
+
+// NOTE: Вывод см. в /docs/persp_proj_mat_2/persp_proj.mcdx.
 Mat4f Mat4f::create_viewport(int w, int h) {
     Mat4f mat_view{};
 
