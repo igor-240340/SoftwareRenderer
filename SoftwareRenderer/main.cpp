@@ -23,6 +23,8 @@ void rasterize_polygons_wireframe(const std::vector<Polygon>& polygons, Framebuf
 void rasterize_polygons_solid(const std::vector<Polygon>& polygons, Framebuffer& framebuffer, ZBuffer& z_buffer);
 void rasterize_polygons_flat_shaded(const std::vector<Polygon>& polygons, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer);
 
+void rasterize_polygons_flat_shaded_and_rotate(const std::vector<Polygon>& polygons, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer, float angle_rad);
+
 void rasterize_polygons_wireframe_ortho(const std::vector<Polygon>& polygons, Framebuffer& framebuffer);
 void rasterize_polygons_solid_ortho(const std::vector<Polygon>& polygons, Framebuffer& framebuffer, ZBuffer& z_buffer);
 void rasterize_polygons_flat_shaded_ortho(const std::vector<Polygon>& polygons, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer);
@@ -65,20 +67,23 @@ int main() {
     ZBuffer z_buffer{ w, h, std::vector<float>(w * h) };
 
     std::vector<Polygon> polygons;
+    // NOTE: Отладочные треугольники рисовать без трансформаций.
     //const std::string model_path = "data/triangles/triangles.obj";
     //const std::string model_path = "data/triangles_clipping/triangles_clipping.obj";
-    //const std::string model_path = "data/viking_room/viking_room.obj";
+
     //const std::string model_path = "data/box/box.obj";
     //const std::string model_path = "data/torus/torus.obj";
     //const std::string model_path = "data/uv_sphere/uv_sphere.obj";
-    //const std::string model_path = "data/skull/skull.obj";
+    const std::string model_path = "data/skull/skull.obj";
     //const std::string model_path = "data/blender_monkey/blender_monkey.obj";
-    const std::string model_path = "data/pig/pig.obj";
+    //const std::string model_path = "data/pig/pig.obj";
     load_model(model_path, polygons);
 
     auto measure_start = high_res_clock::now();
     int frame_count = 0;
 
+    const float angle_rad_step = static_cast<float>(std::numbers::pi / 180.0);
+    float angle_rad_accum = 0.0f;
     while (window.isOpen()) {
         sf::Event event;
         while (window.pollEvent(event)) {
@@ -95,9 +100,11 @@ int main() {
         //rasterize_polygons_solid(polygons, frame_buffer, z_buffer);
         //rasterize_polygons_flat_shaded(polygons, light, frame_buffer, z_buffer);
 
+        rasterize_polygons_flat_shaded_and_rotate(polygons, light, frame_buffer, z_buffer, angle_rad_accum);
+
         //rasterize_polygons_wireframe_ortho(polygons, frame_buffer);
         //rasterize_polygons_solid_ortho(polygons, frame_buffer, z_buffer);
-        rasterize_polygons_flat_shaded_ortho(polygons, light, frame_buffer, z_buffer);
+        //rasterize_polygons_flat_shaded_ortho(polygons, light, frame_buffer, z_buffer);
 
         texture.update(frame_buffer.rgba_array.data());
 
@@ -113,6 +120,10 @@ int main() {
             frame_count = 0;
             measure_start = high_res_clock::now();
         }
+
+        angle_rad_accum += angle_rad_step;;
+        if (angle_rad_accum >= static_cast<float>(std::numbers::pi * 2.0))
+            angle_rad_accum = 0.0f;
     }
 
     return 0;
@@ -158,12 +169,21 @@ void load_model(std::string model_path, std::vector<Polygon>& polygons) {
 }
 
 void rasterize_polygons_wireframe(const std::vector<Polygon>& polygons, Framebuffer& framebuffer) {
+    const Mat4f translation = Mat4f::create_translation(Vec3f{ 0.0f, 0.0f, -4.0f });
+    const Mat4f rotation_x = Mat4f::create_rotation_x(23.0f * static_cast<float>(std::numbers::pi / 180.0));
+    const Mat4f rotation_y = Mat4f::create_rotation_y(23.0f * static_cast<float>(std::numbers::pi / 180.0));
+
     const float fov_vert_rad = static_cast<float>(45.0 * (std::numbers::pi / 180.0));
     const float aspect_ratio = static_cast<float>(framebuffer.w) / framebuffer.h;
     const Mat4f proj = Mat4f::create_perspective(fov_vert_rad, aspect_ratio, 0.1f, 10.0f);
     const Mat4f viewport = Mat4f::create_viewport(framebuffer.w, framebuffer.h);
 
-    for (const Polygon& polygon : polygons) {
+    for (Polygon polygon : polygons) {
+        for (Vertex& vertex : polygon.vertices) {
+            const Vec4f pos{ vertex.pos };
+            vertex.pos = translation * rotation_y * rotation_x * pos;
+        }
+
         std::vector<Vertex> vertices_screen;
         for (const auto& vertex : polygon.vertices) {
             Vec4f pos{ vertex.pos };
@@ -180,12 +200,21 @@ void rasterize_polygons_wireframe(const std::vector<Polygon>& polygons, Framebuf
 }
 
 void rasterize_polygons_solid(const std::vector<Polygon>& polygons, Framebuffer& framebuffer, ZBuffer& z_buffer) {
+    const Mat4f translation = Mat4f::create_translation(Vec3f{ 0.0f, 0.0f, -4.0f });
+    const Mat4f rotation_x = Mat4f::create_rotation_x(23.0f * static_cast<float>(std::numbers::pi / 180.0));
+    const Mat4f rotation_y = Mat4f::create_rotation_y(23.0f * static_cast<float>(std::numbers::pi / 180.0));
+
     const float fov_vert_rad = static_cast<float>(45.0 * (std::numbers::pi / 180.0));
     const float aspect_ratio = static_cast<float>(framebuffer.w) / framebuffer.h;
     const Mat4f proj = Mat4f::create_perspective(fov_vert_rad, aspect_ratio, 0.1f, 10.0f);
     const Mat4f viewport = Mat4f::create_viewport(framebuffer.w, framebuffer.h);
 
-    for (const Polygon& polygon : polygons) {
+    for (Polygon polygon : polygons) {
+        for (Vertex& vertex : polygon.vertices) {
+            const Vec4f pos{ vertex.pos };
+            vertex.pos = translation * rotation_y * rotation_x * pos;
+        }
+
         std::vector<Vertex> vertices_screen;
         for (const auto& vertex : polygon.vertices) {
             Vec4f pos{ vertex.pos };
@@ -202,12 +231,21 @@ void rasterize_polygons_solid(const std::vector<Polygon>& polygons, Framebuffer&
 }
 
 void rasterize_polygons_flat_shaded(const std::vector<Polygon>& polygons, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer) {
+    const Mat4f translation = Mat4f::create_translation(Vec3f{ 0.0f, 0.0f, -4.0f });
+    const Mat4f rotation_x = Mat4f::create_rotation_x(23.0f * static_cast<float>(std::numbers::pi / 180.0));
+    const Mat4f rotation_y = Mat4f::create_rotation_y(23.0f * static_cast<float>(std::numbers::pi / 180.0));
+
     const float fov_vert_rad = static_cast<float>(45.0 * (std::numbers::pi / 180.0));
     const float aspect_ratio = static_cast<float>(framebuffer.w) / framebuffer.h;
     const Mat4f proj = Mat4f::create_perspective(fov_vert_rad, aspect_ratio, 0.1f, 10.0f);
     const Mat4f viewport = Mat4f::create_viewport(framebuffer.w, framebuffer.h);
 
-    for (const Polygon& polygon : polygons) {
+    for (Polygon polygon : polygons) {
+        for (Vertex& vertex : polygon.vertices) {
+            const Vec4f pos{ vertex.pos };
+            vertex.pos = translation * rotation_y * rotation_x * pos;
+        }
+
         // Вычисляем нормаль полигона.
         const Vertex& v0 = polygon.vertices[0];
         const Vertex& v1 = polygon.vertices[1];
@@ -219,7 +257,52 @@ void rasterize_polygons_flat_shaded(const std::vector<Polygon>& polygons, const 
 
         std::vector<Vertex> vertices_screen;
         for (const Vertex& vertex : polygon.vertices) {
-            Vec4f pos{ vertex.pos };
+            const Vec4f pos{ vertex.pos };
+
+            Vec4f pos_clip = proj * pos;
+            Vec4f pos_ndc = pos_clip / pos_clip.w;
+            Vec4f pos_screen = viewport * pos_ndc;
+
+            vertices_screen.push_back(Vertex{ Vec3f{pos_screen} });
+        }
+
+        Polygon polygon_screen{
+            {vertices_screen[0], vertices_screen[1], vertices_screen[2]},
+            polygon.albedo_color,
+            polygon_normal
+        };
+        draw_polygon_flat_shaded(polygon_screen, light, framebuffer, z_buffer);
+    }
+}
+
+void rasterize_polygons_flat_shaded_and_rotate(const std::vector<Polygon>& polygons, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer, float angle_rad) {
+    const Mat4f translation = Mat4f::create_translation(Vec3f{ 0.0f, 0.0f, -4.0f });
+    //const Mat4f rotation_x = Mat4f::create_rotation_x(angle_rad);
+    const Mat4f rotation_y = Mat4f::create_rotation_y(angle_rad);
+
+    const float fov_vert_rad = static_cast<float>(45.0 * (std::numbers::pi / 180.0));
+    const float aspect_ratio = static_cast<float>(framebuffer.w) / framebuffer.h;
+    const Mat4f proj = Mat4f::create_perspective(fov_vert_rad, aspect_ratio, 0.1f, 10.0f);
+    const Mat4f viewport = Mat4f::create_viewport(framebuffer.w, framebuffer.h);
+
+    for (Polygon polygon : polygons) {
+        for (Vertex& vertex : polygon.vertices) {
+            const Vec4f pos{ vertex.pos };
+            vertex.pos = translation * rotation_y * /*rotation_x **/ pos;
+        }
+
+        // Вычисляем нормаль полигона.
+        const Vertex& v0 = polygon.vertices[0];
+        const Vertex& v1 = polygon.vertices[1];
+        const Vertex& v2 = polygon.vertices[2];
+
+        const Vec3f edge1 = v1.pos - v0.pos;
+        const Vec3f edge2 = v2.pos - v0.pos;
+        const Vec3f polygon_normal = Vec3f::cross(edge1, edge2).get_normalized();
+
+        std::vector<Vertex> vertices_screen;
+        for (const Vertex& vertex : polygon.vertices) {
+            const Vec4f pos{ vertex.pos };
 
             Vec4f pos_clip = proj * pos;
             Vec4f pos_ndc = pos_clip / pos_clip.w;
@@ -238,13 +321,22 @@ void rasterize_polygons_flat_shaded(const std::vector<Polygon>& polygons, const 
 }
 
 void rasterize_polygons_wireframe_ortho(const std::vector<Polygon>& polygons, Framebuffer& framebuffer) {
+    const Mat4f translation = Mat4f::create_translation(Vec3f{ 0.0f, 0.0f, -4.0f });
+    const Mat4f rotation_x = Mat4f::create_rotation_x(23.0f * static_cast<float>(std::numbers::pi / 180.0));
+    const Mat4f rotation_y = Mat4f::create_rotation_y(23.0f * static_cast<float>(std::numbers::pi / 180.0));
+
     const float ratio = static_cast<float>(framebuffer.w) / framebuffer.h;
     const float proj_plane_w = 4.0f; // [-2, 2].
     const float proj_plane_h = proj_plane_w / ratio; // Требуем, чтобы proj_plane_w / proj_plane_h = w / h.
     const Mat4f proj = Mat4f::create_ortho(-proj_plane_w / 2, proj_plane_w / 2, -proj_plane_h / 2, proj_plane_h / 2, 0.1f, 10.0f);
     const Mat4f viewport = Mat4f::create_viewport(framebuffer.w, framebuffer.h);
 
-    for (const Polygon& polygon : polygons) {
+    for (Polygon polygon : polygons) {
+        for (Vertex& vertex : polygon.vertices) {
+            const Vec4f pos{ vertex.pos };
+            vertex.pos = translation * rotation_y * rotation_x * pos;
+        }
+
         std::vector<Vertex> vertices_screen;
         for (const auto& vertex : polygon.vertices) {
             Vec4f pos{ vertex.pos };
@@ -261,13 +353,22 @@ void rasterize_polygons_wireframe_ortho(const std::vector<Polygon>& polygons, Fr
 }
 
 void rasterize_polygons_solid_ortho(const std::vector<Polygon>& polygons, Framebuffer& framebuffer, ZBuffer& z_buffer) {
+    const Mat4f translation = Mat4f::create_translation(Vec3f{ 0.0f, 0.0f, -4.0f });
+    const Mat4f rotation_x = Mat4f::create_rotation_x(23.0f * static_cast<float>(std::numbers::pi / 180.0));
+    const Mat4f rotation_y = Mat4f::create_rotation_y(23.0f * static_cast<float>(std::numbers::pi / 180.0));
+
     const float ratio = static_cast<float>(framebuffer.w) / framebuffer.h;
     const float proj_plane_w = 4.0f;
     const float proj_plane_h = proj_plane_w / ratio;
     const Mat4f proj = Mat4f::create_ortho(-proj_plane_w / 2, proj_plane_w / 2, -proj_plane_h / 2, proj_plane_h / 2, 0.1f, 10.0f);
     const Mat4f viewport = Mat4f::create_viewport(framebuffer.w, framebuffer.h);
 
-    for (const Polygon& polygon : polygons) {
+    for (Polygon polygon : polygons) {
+        for (Vertex& vertex : polygon.vertices) {
+            const Vec4f pos{ vertex.pos };
+            vertex.pos = translation * rotation_y * rotation_x * pos;
+        }
+
         std::vector<Vertex> vertices_screen;
         for (const auto& vertex : polygon.vertices) {
             Vec4f pos{ vertex.pos };
@@ -284,13 +385,22 @@ void rasterize_polygons_solid_ortho(const std::vector<Polygon>& polygons, Frameb
 }
 
 void rasterize_polygons_flat_shaded_ortho(const std::vector<Polygon>& polygons, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer) {
+    const Mat4f translation = Mat4f::create_translation(Vec3f{ 0.0f, 0.0f, -4.0f });
+    const Mat4f rotation_x = Mat4f::create_rotation_x(23.0f * static_cast<float>(std::numbers::pi / 180.0));
+    const Mat4f rotation_y = Mat4f::create_rotation_y(23.0f * static_cast<float>(std::numbers::pi / 180.0));
+
     const float ratio = static_cast<float>(framebuffer.w) / framebuffer.h;
     const float proj_plane_w = 4.0f;
     const float proj_plane_h = proj_plane_w / ratio;
     const Mat4f proj = Mat4f::create_ortho(-proj_plane_w / 2, proj_plane_w / 2, -proj_plane_h / 2, proj_plane_h / 2, 0.1f, 10.0f);
     const Mat4f viewport = Mat4f::create_viewport(framebuffer.w, framebuffer.h);
 
-    for (const Polygon& polygon : polygons) {
+    for (Polygon polygon : polygons) {
+        for (Vertex& vertex : polygon.vertices) {
+            const Vec4f pos{ vertex.pos };
+            vertex.pos = translation * rotation_y * rotation_x * pos;
+        }
+
         // Вычисляем нормаль полигона.
         const Vertex& v0 = polygon.vertices[0];
         const Vertex& v1 = polygon.vertices[1];

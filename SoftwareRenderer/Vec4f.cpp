@@ -13,3 +13,7 @@ Vec4f Vec4f::operator/(float scalar) const {
     const float scalar_inv = 1.0f / scalar;
     return Vec4f(x * scalar_inv, y * scalar_inv, z * scalar_inv, w * scalar_inv);
 }
+
+float Vec4f::dot(const Vec4f& a, const Vec4f& b) {
+    return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
+}

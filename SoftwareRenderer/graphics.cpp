@@ -1,5 +1,5 @@
 #include <bitset>
-#include <ranges>
+#include <algorithm>
 
 #include "graphics.h"
 

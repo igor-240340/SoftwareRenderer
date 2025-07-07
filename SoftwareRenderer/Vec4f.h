@@ -16,4 +16,6 @@ public:
     Vec4f(float x, float y, float z, float w = 1.0f);
 
     Vec4f operator/(float scalar) const;
+
+    static float dot(const Vec4f& a, const Vec4f& b);
 };
