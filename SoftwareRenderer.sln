@@ -15,6 +15,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ColorInterpolation", "Color
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ZBuffer", "ZBuffer\ZBuffer.vcxproj", "{904F5A13-D8BA-4208-8682-9038310B3C3A}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Transformations", "Transformations\Transformations.vcxproj", "{5D6DC50C-F661-44EE-9BED-06E9F3637399}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -71,6 +73,14 @@ Global
 		{904F5A13-D8BA-4208-8682-9038310B3C3A}.Release|x64.Build.0 = Release|x64
 		{904F5A13-D8BA-4208-8682-9038310B3C3A}.Release|x86.ActiveCfg = Release|Win32
 		{904F5A13-D8BA-4208-8682-9038310B3C3A}.Release|x86.Build.0 = Release|Win32
+		{5D6DC50C-F661-44EE-9BED-06E9F3637399}.Debug|x64.ActiveCfg = Debug|x64
+		{5D6DC50C-F661-44EE-9BED-06E9F3637399}.Debug|x64.Build.0 = Debug|x64
+		{5D6DC50C-F661-44EE-9BED-06E9F3637399}.Debug|x86.ActiveCfg = Debug|Win32
+		{5D6DC50C-F661-44EE-9BED-06E9F3637399}.Debug|x86.Build.0 = Debug|Win32
+		{5D6DC50C-F661-44EE-9BED-06E9F3637399}.Release|x64.ActiveCfg = Release|x64
+		{5D6DC50C-F661-44EE-9BED-06E9F3637399}.Release|x64.Build.0 = Release|x64
+		{5D6DC50C-F661-44EE-9BED-06E9F3637399}.Release|x86.ActiveCfg = Release|Win32
+		{5D6DC50C-F661-44EE-9BED-06E9F3637399}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
