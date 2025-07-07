@@ -54,6 +54,7 @@ int main() {
 
     sf::RenderWindow window(sf::VideoMode(w, h), "Software Renderer");
     window.setFramerateLimit(0);
+    window.setVerticalSyncEnabled(true);
 
     sf::Texture texture;
     if (!texture.create(w, h)) {
@@ -74,8 +75,8 @@ int main() {
     //const std::string model_path = "data/box/box.obj";
     //const std::string model_path = "data/torus/torus.obj";
     //const std::string model_path = "data/uv_sphere/uv_sphere.obj";
-    const std::string model_path = "data/skull/skull.obj";
-    //const std::string model_path = "data/blender_monkey/blender_monkey.obj";
+    //const std::string model_path = "data/skull/skull.obj";
+    const std::string model_path = "data/blender_monkey/blender_monkey.obj";
     //const std::string model_path = "data/pig/pig.obj";
     load_model(model_path, polygons);
 
@@ -83,6 +84,7 @@ int main() {
     int frame_count = 0;
 
     const float angle_rad_step = static_cast<float>(std::numbers::pi / 180.0);
+    const float two_pi = static_cast<float>(std::numbers::pi * 2.0);
     float angle_rad_accum = 0.0f;
     while (window.isOpen()) {
         sf::Event event;
@@ -121,9 +123,10 @@ int main() {
             measure_start = high_res_clock::now();
         }
 
-        angle_rad_accum += angle_rad_step;;
-        if (angle_rad_accum >= static_cast<float>(std::numbers::pi * 2.0))
-            angle_rad_accum = 0.0f;
+        // TODO: Отвязать от фреймрейта.
+        angle_rad_accum += angle_rad_step;
+        if (angle_rad_accum > two_pi)
+            angle_rad_accum = std::fmod(angle_rad_accum, two_pi);
     }
 
     return 0;
