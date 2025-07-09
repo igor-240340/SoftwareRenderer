@@ -31,6 +31,8 @@ void rasterize_polygons_flat_shaded_ortho(const std::vector<Polygon>& polygons, 
 
 void debug_z_fighting(Framebuffer& frame_buffer, ZBuffer& z_buffer);
 
+void demonstrate_gimbal_lock(const std::vector<Polygon>& polygons, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer);
+
 sf::Color get_random_color();
 
 using high_res_clock = std::chrono::high_resolution_clock;
@@ -76,8 +78,9 @@ int main() {
     //const std::string model_path = "data/torus/torus.obj";
     //const std::string model_path = "data/uv_sphere/uv_sphere.obj";
     //const std::string model_path = "data/skull/skull.obj";
-    const std::string model_path = "data/blender_monkey/blender_monkey.obj";
+    //const std::string model_path = "data/blender_monkey/blender_monkey.obj";
     //const std::string model_path = "data/pig/pig.obj";
+    const std::string model_path = "data/plane/plane.obj";
     load_model(model_path, polygons);
 
     auto measure_start = high_res_clock::now();
@@ -102,11 +105,13 @@ int main() {
         //rasterize_polygons_solid(polygons, frame_buffer, z_buffer);
         //rasterize_polygons_flat_shaded(polygons, light, frame_buffer, z_buffer);
 
-        rasterize_polygons_flat_shaded_and_rotate(polygons, light, frame_buffer, z_buffer, angle_rad_accum);
+        //rasterize_polygons_flat_shaded_and_rotate(polygons, light, frame_buffer, z_buffer, angle_rad_accum);
 
         //rasterize_polygons_wireframe_ortho(polygons, frame_buffer);
         //rasterize_polygons_solid_ortho(polygons, frame_buffer, z_buffer);
         //rasterize_polygons_flat_shaded_ortho(polygons, light, frame_buffer, z_buffer);
+
+        demonstrate_gimbal_lock(polygons, light, frame_buffer, z_buffer);
 
         texture.update(frame_buffer.rgba_array.data());
 
@@ -496,6 +501,55 @@ void debug_z_fighting(Framebuffer& framebuffer, ZBuffer& z_buffer) {
     const int y = 488;
     const sf::Color color = read_framebuffer(x, y, framebuffer);
     const float depth = read_z_buffer(x, y, z_buffer);
+}
+
+void demonstrate_gimbal_lock(const std::vector<Polygon>& polygons, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer) {
+    const Mat4f translation = Mat4f::create_translation(Vec3f{ 0.0f, 0.0f, -4.0f });
+
+    const Mat4f rotation_x = Mat4f::create_rotation_x(90.0f * static_cast<float>(std::numbers::pi / 180.0));
+    const Mat4f rotation_y = Mat4f::create_rotation_y(45.0f * static_cast<float>(std::numbers::pi / 180.0));
+    const Mat4f rotation_z = Mat4f::create_rotation_z(45.0f * static_cast<float>(std::numbers::pi / 180.0));
+
+    const float fov_vert_rad = static_cast<float>(45.0 * (std::numbers::pi / 180.0));
+    const float aspect_ratio = static_cast<float>(framebuffer.w) / framebuffer.h;
+    const Mat4f proj = Mat4f::create_perspective(fov_vert_rad, aspect_ratio, 0.1f, 10.0f);
+    const Mat4f viewport = Mat4f::create_viewport(framebuffer.w, framebuffer.h);
+
+    for (Polygon polygon : polygons) {
+        for (Vertex& vertex : polygon.vertices) {
+            const Vec4f pos{ vertex.pos };
+            // Поворот по Y "превратился" в поворот по Z - потеряли степень свободы.
+            vertex.pos = translation * rotation_z * rotation_x * rotation_y * pos;
+            //vertex.pos = translation * rotation_z * rotation_y * rotation_x * pos;
+        }
+
+        // Вычисляем нормаль полигона.
+        const Vertex& v0 = polygon.vertices[0];
+        const Vertex& v1 = polygon.vertices[1];
+        const Vertex& v2 = polygon.vertices[2];
+
+        const Vec3f edge1 = v1.pos - v0.pos;
+        const Vec3f edge2 = v2.pos - v0.pos;
+        const Vec3f polygon_normal = Vec3f::cross(edge1, edge2).get_normalized();
+
+        std::vector<Vertex> vertices_screen;
+        for (const Vertex& vertex : polygon.vertices) {
+            const Vec4f pos{ vertex.pos };
+
+            Vec4f pos_clip = proj * pos;
+            Vec4f pos_ndc = pos_clip / pos_clip.w;
+            Vec4f pos_screen = viewport * pos_ndc;
+
+            vertices_screen.push_back(Vertex{ Vec3f{pos_screen} });
+        }
+
+        Polygon polygon_screen{
+            {vertices_screen[0], vertices_screen[1], vertices_screen[2]},
+            polygon.albedo_color,
+            polygon_normal
+        };
+        draw_polygon_flat_shaded(polygon_screen, light, framebuffer, z_buffer);
+    }
 }
 
 sf::Color get_random_color() {
