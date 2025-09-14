@@ -30,12 +30,6 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Graphics", "Graphics\Graphi
 		{5560C250-A33B-4698-BDCA-2812E227AA13} = {5560C250-A33B-4698-BDCA-2812E227AA13}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DrawSegmentZ", "DrawSegmentZ\DrawSegmentZ.vcxproj", "{16A43396-B319-4BC6-8F5C-FF811002F795}"
-	ProjectSection(ProjectDependencies) = postProject
-		{5560C250-A33B-4698-BDCA-2812E227AA13} = {5560C250-A33B-4698-BDCA-2812E227AA13}
-		{898711C3-2568-4503-9675-D26CAC06E5F8} = {898711C3-2568-4503-9675-D26CAC06E5F8}
-	EndProjectSection
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -124,14 +118,6 @@ Global
 		{898711C3-2568-4503-9675-D26CAC06E5F8}.Release|x64.Build.0 = Release|x64
 		{898711C3-2568-4503-9675-D26CAC06E5F8}.Release|x86.ActiveCfg = Release|Win32
 		{898711C3-2568-4503-9675-D26CAC06E5F8}.Release|x86.Build.0 = Release|Win32
-		{16A43396-B319-4BC6-8F5C-FF811002F795}.Debug|x64.ActiveCfg = Debug|x64
-		{16A43396-B319-4BC6-8F5C-FF811002F795}.Debug|x64.Build.0 = Debug|x64
-		{16A43396-B319-4BC6-8F5C-FF811002F795}.Debug|x86.ActiveCfg = Debug|Win32
-		{16A43396-B319-4BC6-8F5C-FF811002F795}.Debug|x86.Build.0 = Debug|Win32
-		{16A43396-B319-4BC6-8F5C-FF811002F795}.Release|x64.ActiveCfg = Release|x64
-		{16A43396-B319-4BC6-8F5C-FF811002F795}.Release|x64.Build.0 = Release|x64
-		{16A43396-B319-4BC6-8F5C-FF811002F795}.Release|x86.ActiveCfg = Release|Win32
-		{16A43396-B319-4BC6-8F5C-FF811002F795}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
