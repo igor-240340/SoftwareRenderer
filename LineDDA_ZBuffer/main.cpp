@@ -27,7 +27,7 @@ struct Segment {
 
 void load_model(std::string model_path, std::vector<Polygon>& polygons);
 void rasterize_polygons_flat_shaded(const std::vector<Polygon>& polygons, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer);
-void draw_segment(const Segment& segment, Framebuffer& framebuffer, ZBuffer& z_buffer);
+void draw_segment_z(const Segment& segment, Framebuffer& framebuffer, ZBuffer& z_buffer);
 
 using high_res_clock = std::chrono::high_resolution_clock;
 
@@ -89,7 +89,7 @@ int main() {
 		clear_z_buffer(1.0f, z_buffer);
 
 		rasterize_polygons_flat_shaded(polygons, light, frame_buffer, z_buffer);
-		draw_segment(s, frame_buffer, z_buffer);
+		draw_segment_z(s, frame_buffer, z_buffer);
 
 		texture.update(frame_buffer.rgba_array.data());
 
@@ -199,7 +199,7 @@ void rasterize_polygons_flat_shaded(const std::vector<Polygon>& polygons, const 
 	}
 }
 
-void draw_segment(const Segment& segment, Framebuffer& framebuffer, ZBuffer& z_buffer) {
+void draw_segment_z(const Segment& segment, Framebuffer& framebuffer, ZBuffer& z_buffer) {
 	Mat4f translation = Mat4f::create_translation(Vec3f{ 0.0f, 0.0f, -4.0f });
 	Mat4f rotation_x = Mat4f::create_rotation_x(33.0f * deg_to_rad);
 	Mat4f rotation_y = Mat4f::create_rotation_y(23.0f * deg_to_rad);
@@ -225,7 +225,9 @@ void draw_segment(const Segment& segment, Framebuffer& framebuffer, ZBuffer& z_b
 
 	int x0 = static_cast<int>(std::round(a_screen.x));
 	int y0 = static_cast<int>(std::round(a_screen.y));
+	float z0 = a_screen.z;
 	int x1 = static_cast<int>(std::round(b_screen.x));
 	int y1 = static_cast<int>(std::round(b_screen.y));
-	draw_line_dda(x0, y0, x1, y1, sf::Color::Magenta, framebuffer);
+	float z1 = b_screen.z;
+	draw_line_dda_z(x0, y0, z0, x1, y1, z1, sf::Color::Magenta, framebuffer, z_buffer);
 }

@@ -34,6 +34,7 @@ struct ZBuffer {
 
 void draw_polygon_wireframe(Polygon polygon_screen, Framebuffer& framebuffer);
 void draw_line_dda(int x0, int y0, int x1, int y1, sf::Color color, Framebuffer& framebuffer);
+void draw_line_dda_z(int x0, int y0, float z0, int x1, int y1, float z1, sf::Color color, Framebuffer& framebuffer, ZBuffer& z_buffer);
 void set_pixel_color(int x, int y, sf::Color color, Framebuffer& framebuffer);
 void clear_framebuffer(sf::Color color, Framebuffer& framebuffer);
 void clear_z_buffer(float depth_value, ZBuffer& z_buffer);
