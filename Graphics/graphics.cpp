@@ -123,20 +123,35 @@ void draw_line_dda_z(int x0, int y0, float z0, int x1, int y1, float z1, sf::Col
 	// Vertical.
 	if (x0 == x1) {
 		// Make ascending.
-		if (y0 > y1)
+		if (y0 > y1) {
 			std::swap(y0, y1);
+			std::swap(z0, z1);
+		}
 
-		for (int y = y0; y <= y1; y++)
-			set_pixel_color(x0, y, color, framebuffer);
+		const float z_slope = (z1 - z0) / (y1 - y0);
+		float z_accum = z0;
+		for (int y = y0; y <= y1; ++y) {
+			if (perform_depth_test(x0, y, z_accum, z_buffer))
+				set_pixel_color(x0, y, color, framebuffer);
+
+			z_accum += z_slope;
+		}
 	}
 	// Horizontal.
 	else if (y0 == y1) {
 		// Make ascending.
-		if (x0 > x1)
+		if (x0 > x1) {
 			std::swap(x0, x1);
+			std::swap(z0, z1);
+		}
 
-		for (int x = x0; x <= x1; x++)
-			set_pixel_color(x, y0, color, framebuffer);
+		const float z_slope = (z1 - z0) / (x1 - x0);
+		float z_accum = z0;
+		for (int x = x0; x <= x1; ++x)
+			if (perform_depth_test(x, y0, z_accum, z_buffer))
+				set_pixel_color(x, y0, color, framebuffer);
+
+		z_accum += z_slope;
 	}
 
 	int dy = y1 - y0;
@@ -148,17 +163,24 @@ void draw_line_dda_z(int x0, int y0, float z0, int x1, int y1, float z1, sf::Col
 		if (x0 > x1) {
 			std::swap(x0, x1);
 			std::swap(y0, y1);
+			std::swap(z0, z1);
 			dx = -dx;
 			dy = -dy;
 		}
 
 		const float slope = static_cast<float>(dy) / dx;
+		const float z_slope = (z1 - z0) / dx;
 
 		float y_accum = static_cast<float>(y0);
+		float z_accum = z0;
 		for (int x = x0; x <= x1; x++) {
 			int y = static_cast<int>(std::round(y_accum));
-			set_pixel_color(x, y, color, framebuffer);
+
+			if (perform_depth_test(x, y, z_accum, z_buffer))
+				set_pixel_color(x, y, color, framebuffer);
+
 			y_accum += slope;
+			z_accum += z_slope;
 		}
 	}
 	// Steep.
@@ -176,7 +198,7 @@ void draw_line_dda_z(int x0, int y0, float z0, int x1, int y1, float z1, sf::Col
 		const float z_slope = (z1 - z0) / dy;
 
 		float x_accum = static_cast<float>(x0);
-		float z_accum = static_cast<float>(z0); // Keeps current fragment z.
+		float z_accum = z0; // Keeps current fragment z.
 		for (int y = y0; y <= y1; y++) {
 			int x = static_cast<int>(std::round(x_accum));
 

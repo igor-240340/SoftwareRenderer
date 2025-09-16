@@ -29,12 +29,14 @@ void load_model(std::string model_path, std::vector<Polygon>& polygons);
 void rasterize_polygons_flat_shaded(const std::vector<Polygon>& polygons, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer);
 void draw_segment_z(const Segment& segment, Framebuffer& framebuffer, ZBuffer& z_buffer);
 
-using high_res_clock = std::chrono::high_resolution_clock;
+// Каждая функция рисует соответствующий сегмент из файла test_segments.ggb.
+void draw_test_segments(Framebuffer& framebuffer, ZBuffer& z_buffer);
+void draw_segment_1(Framebuffer& framebuffer, ZBuffer& z_buffer);
+void draw_segment_2(Framebuffer& framebuffer, ZBuffer& z_buffer);
+void draw_segment_3(Framebuffer& framebuffer, ZBuffer& z_buffer);
+void draw_segment_4(Framebuffer& framebuffer, ZBuffer& z_buffer);
 
-Segment s{
-	Vec3f{0.0f, 0.0f, -5.0f},
-	Vec3f{0.0f, 0.0f, 1.0f}
-};
+using high_res_clock = std::chrono::high_resolution_clock;
 
 int main() {
 	constexpr int w = 800;
@@ -65,7 +67,7 @@ int main() {
 	sf::Sprite sprite(texture);
 
 	Light light{ Vec3f{0.0f, 0.0f, -1.0f} };
-	Framebuffer frame_buffer{ w, h, std::vector<sf::Uint8>(w * h * 4) };
+	Framebuffer framebuffer{ w, h, std::vector<sf::Uint8>(w * h * 4) };
 	ZBuffer z_buffer{ w, h, std::vector<float>(w * h) };
 
 	std::vector<Polygon> polygons;
@@ -85,13 +87,13 @@ int main() {
 				window.close();
 		}
 
-		clear_framebuffer(sf::Color::Blue, frame_buffer);
+		clear_framebuffer(sf::Color::Blue, framebuffer);
 		clear_z_buffer(1.0f, z_buffer);
 
-		rasterize_polygons_flat_shaded(polygons, light, frame_buffer, z_buffer);
-		draw_segment_z(s, frame_buffer, z_buffer);
+		rasterize_polygons_flat_shaded(polygons, light, framebuffer, z_buffer);
+		draw_test_segments(framebuffer, z_buffer);
 
-		texture.update(frame_buffer.rgba_array.data());
+		texture.update(framebuffer.rgba_array.data());
 
 		window.clear();
 		window.draw(sprite);
@@ -200,10 +202,6 @@ void rasterize_polygons_flat_shaded(const std::vector<Polygon>& polygons, const 
 }
 
 void draw_segment_z(const Segment& segment, Framebuffer& framebuffer, ZBuffer& z_buffer) {
-	Mat4f translation = Mat4f::create_translation(Vec3f{ 0.0f, 0.0f, -4.0f });
-	Mat4f rotation_x = Mat4f::create_rotation_x(33.0f * deg_to_rad);
-	Mat4f rotation_y = Mat4f::create_rotation_y(23.0f * deg_to_rad);
-
 	float fov_vert_rad = 45.0f * deg_to_rad;
 	float aspect_ratio = static_cast<float>(framebuffer.w) / framebuffer.h;
 	Mat4f proj = Mat4f::create_perspective(fov_vert_rad, aspect_ratio, 0.1f, 10.0f);
@@ -211,9 +209,6 @@ void draw_segment_z(const Segment& segment, Framebuffer& framebuffer, ZBuffer& z
 
 	Vec4f a{ segment.a };
 	Vec4f b{ segment.b };
-
-	a = translation * rotation_y * rotation_x * a;
-	b = translation * rotation_y * rotation_x * b;
 
 	Vec4f a_clip = proj * a;
 	Vec4f a_ndc = a_clip / a_clip.w;
@@ -230,4 +225,47 @@ void draw_segment_z(const Segment& segment, Framebuffer& framebuffer, ZBuffer& z
 	int y1 = static_cast<int>(std::round(b_screen.y));
 	float z1 = b_screen.z;
 	draw_line_dda_z(x0, y0, z0, x1, y1, z1, sf::Color::Magenta, framebuffer, z_buffer);
+}
+
+void draw_test_segments(Framebuffer& framebuffer, ZBuffer& z_buffer) {
+	draw_segment_1(framebuffer, z_buffer);
+	draw_segment_2(framebuffer, z_buffer);
+	draw_segment_3(framebuffer, z_buffer);
+	draw_segment_4(framebuffer, z_buffer);
+}
+
+void draw_segment_1(Framebuffer& framebuffer, ZBuffer& z_buffer) {
+	Segment s{
+		Vec3f{0.327694684f, -0.544639051f, -3.22799969f},
+		Vec3f{-1.63847339f, 2.72319531f, -7.86000156f}
+	};
+
+	draw_segment_z(s, framebuffer, z_buffer);
+}
+
+void draw_segment_2(Framebuffer& framebuffer, ZBuffer& z_buffer) {
+	Segment s{
+		Vec3f{2.487350944059f, 1.847279348198f, -5.903277503310f},
+		Vec3f{-1.298756193452f, 0.2646881313974f, -2.993716320522f}
+	};
+
+	draw_segment_z(s, framebuffer, z_buffer);
+}
+
+void draw_segment_3(Framebuffer& framebuffer, ZBuffer& z_buffer) {
+	Segment s{
+		Vec3f{-0.5f, -1.5f, -4.0f},
+		Vec3f{-0.5f, 1.3f, -4.0f}
+	};
+
+	draw_segment_z(s, framebuffer, z_buffer);
+}
+
+void draw_segment_4(Framebuffer& framebuffer, ZBuffer& z_buffer) {
+	Segment s{
+		Vec3f{1.805626523726f, 0.5f, -4.0f},
+		Vec3f{-1.8f, 0.5f, -4.0f}
+	};
+
+	draw_segment_z(s, framebuffer, z_buffer);
 }
