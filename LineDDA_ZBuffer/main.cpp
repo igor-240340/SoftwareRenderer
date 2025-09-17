@@ -36,6 +36,12 @@ void draw_segment_2(Framebuffer& framebuffer, ZBuffer& z_buffer);
 void draw_segment_3(Framebuffer& framebuffer, ZBuffer& z_buffer);
 void draw_segment_4(Framebuffer& framebuffer, ZBuffer& z_buffer);
 
+// Достаточно одного примера, который даёт все четыре итерации в алгоритме клиппинга.
+// То есть, этот пример приведёт к клиппингу со всеми границами экрана,
+// а это значит, что будут покрыты все ветки в коде клиппинга и мы убедимся,
+// что в каждой ветке z клипается корректно.
+void draw_test_segment_clipping(Framebuffer& framebuffer, ZBuffer& z_buffer);
+
 using high_res_clock = std::chrono::high_resolution_clock;
 
 int main() {
@@ -92,6 +98,7 @@ int main() {
 
 		rasterize_polygons_flat_shaded(polygons, light, framebuffer, z_buffer);
 		draw_test_segments(framebuffer, z_buffer);
+		draw_test_segment_clipping(framebuffer, z_buffer);
 
 		texture.update(framebuffer.rgba_array.data());
 
@@ -218,11 +225,11 @@ void draw_segment_z(const Segment& segment, Framebuffer& framebuffer, ZBuffer& z
 	Vec4f b_ndc = b_clip / b_clip.w;
 	Vec4f b_screen = viewport * b_ndc;
 
-	int x0 = static_cast<int>(std::round(a_screen.x));
-	int y0 = static_cast<int>(std::round(a_screen.y));
+	float x0 = a_screen.x;
+	float y0 = a_screen.y;
 	float z0 = a_screen.z;
-	int x1 = static_cast<int>(std::round(b_screen.x));
-	int y1 = static_cast<int>(std::round(b_screen.y));
+	float x1 = b_screen.x;
+	float y1 = b_screen.y;
 	float z1 = b_screen.z;
 	draw_line_dda_z(x0, y0, z0, x1, y1, z1, sf::Color::Magenta, framebuffer, z_buffer);
 }
@@ -265,6 +272,15 @@ void draw_segment_4(Framebuffer& framebuffer, ZBuffer& z_buffer) {
 	Segment s{
 		Vec3f{1.805626523726f, 0.5f, -4.0f},
 		Vec3f{-1.8f, 0.5f, -4.0f}
+	};
+
+	draw_segment_z(s, framebuffer, z_buffer);
+}
+
+void draw_test_segment_clipping(Framebuffer& framebuffer, ZBuffer& z_buffer) {
+	Segment s{
+		Vec3f{6.639031641130f, 6.506871797196f, -8.700240262309f},
+		Vec3f{-2.304368646182f, -2.351564776633f, -3.117240382447f}
 	};
 
 	draw_segment_z(s, framebuffer, z_buffer);

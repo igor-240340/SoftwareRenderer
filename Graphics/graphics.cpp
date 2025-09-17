@@ -119,7 +119,15 @@ void draw_line_dda(int x0, int y0, int x1, int y1, sf::Color color, Framebuffer&
 // Мы могли бы интерполировать Z вдоль истинного отрезка, приводя, скажем, Y координату к целочисленной. Но это не имеет особого смысла,
 // поскольку X' в общем случае всё-равно останется дробным, а горизонтальная интерполяция Z для отрезка уже не имеет смысла
 // (в треугольнике это была бы интерполяция вдоль скан-линии).
-void draw_line_dda_z(int x0, int y0, float z0, int x1, int y1, float z1, sf::Color color, Framebuffer& framebuffer, ZBuffer& z_buffer) {
+void draw_line_dda_z(float x0_f, float y0_f, float z0, float x1_f, float y1_f, float z1, sf::Color color, Framebuffer& framebuffer, ZBuffer& z_buffer) {
+	// Не рисуем, если линия - полностью за пределами экрана.
+	if (!clip_line_coh_suth_z(x0_f, y0_f, z0, x1_f, y1_f, z1, framebuffer))
+		return;
+	int x0 = static_cast<int>(std::round(x0_f));
+	int y0 = static_cast<int>(std::round(y0_f));
+	int x1 = static_cast<int>(std::round(x1_f));
+	int y1 = static_cast<int>(std::round(y1_f));
+
 	// Vertical.
 	if (x0 == x1) {
 		// Make ascending.
@@ -305,6 +313,89 @@ bool clip_line_coh_suth(float& x0, float& y0, float& x1, float& y1, const Frameb
 	y0 = p0.y;
 	x1 = p1.x;
 	y1 = p1.y;
+
+	return line_inside;
+}
+
+bool clip_line_coh_suth_z(float& x0, float& y0, float& z0, float& x1, float& y1, float& z1, const Framebuffer& framebuffer) {
+	enum EdgeBit {
+		left = 3,
+		right = 2,
+		top = 1,
+		bottom = 0
+	};
+
+	struct Point {
+		float x;
+		float y;
+		float z;
+		std::bitset<4> region_code;
+	};
+
+	Point p0{ x0, y0, z0 };
+	p0.region_code.set(EdgeBit::left, p0.x < 0);
+	p0.region_code.set(EdgeBit::right, p0.x > framebuffer.w - 1);
+	p0.region_code.set(EdgeBit::top, p0.y < 0);
+	p0.region_code.set(EdgeBit::bottom, p0.y > framebuffer.h - 1);
+
+	Point p1{ x1, y1, z1 };
+	p1.region_code.set(EdgeBit::left, p1.x < 0);
+	p1.region_code.set(EdgeBit::right, p1.x > framebuffer.w - 1);
+	p1.region_code.set(EdgeBit::top, p1.y < 0);
+	p1.region_code.set(EdgeBit::bottom, p1.y > framebuffer.h - 1);
+
+	bool line_inside = (p0.region_code | p1.region_code).none();
+	bool line_outside = (p0.region_code & p1.region_code).any();
+	while (!line_inside && !line_outside) {
+		// Make sure the first point is the one that is outside.
+		if (p0.region_code.none())
+			std::swap(p0, p1);
+
+		// Find the first edge outside of which the point is.
+		EdgeBit first_edge{};
+		for (int i = 3; i >= 0; --i) {
+			if (p0.region_code[i]) {
+				first_edge = static_cast<EdgeBit>(i);
+				break;
+			}
+		}
+
+		if (first_edge == EdgeBit::left || first_edge == EdgeBit::right) {
+			float edge_x = first_edge == EdgeBit::left ? 0.0f : static_cast<float>(framebuffer.w - 1);
+			float slope = (p1.y - p0.y) / (p1.x - p0.x);
+			float z_slope = (p1.z - p0.z) / (p1.x - p0.x);
+
+			float x_excess = edge_x - p0.x;
+			p0.x = edge_x;
+			p0.y += x_excess * slope;
+			p0.z += x_excess * z_slope;
+		}
+		else {
+			float edge_y = first_edge == EdgeBit::top ? 0.0f : static_cast<float>(framebuffer.h - 1);
+			float inv_slope = (p1.x - p0.x) / (p1.y - p0.y);
+			float z_slope = (p1.z - p0.z) / (p1.y - p0.y);
+
+			float y_excess = edge_y - p0.y;
+			p0.y = edge_y;
+			p0.x += y_excess * inv_slope;
+			p0.z += y_excess * z_slope;
+		}
+
+		p0.region_code.set(EdgeBit::left, p0.x < 0);
+		p0.region_code.set(EdgeBit::right, p0.x > framebuffer.w - 1);
+		p0.region_code.set(EdgeBit::top, p0.y < 0);
+		p0.region_code.set(EdgeBit::bottom, p0.y > framebuffer.h - 1);
+
+		line_inside = (p0.region_code | p1.region_code).none();
+		line_outside = (p0.region_code & p1.region_code).any();
+	}
+
+	x0 = p0.x;
+	y0 = p0.y;
+	z0 = p0.z;
+	x1 = p1.x;
+	y1 = p1.y;
+	z1 = p1.z;
 
 	return line_inside;
 }
