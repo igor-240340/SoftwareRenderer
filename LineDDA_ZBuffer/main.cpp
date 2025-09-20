@@ -270,8 +270,8 @@ void draw_segment_3(Framebuffer& framebuffer, ZBuffer& z_buffer) {
 
 void draw_segment_4(Framebuffer& framebuffer, ZBuffer& z_buffer) {
 	Segment s{
-		Vec3f{1.805626523726f, 0.5f, -4.0f},
-		Vec3f{-1.8f, 0.5f, -4.0f}
+		Vec3f{-1.222600724124f, 0.0f, -3.031997661787f},
+		Vec3f{1.848148573667f, 0.0f, -5.229337311136f}
 	};
 
 	draw_segment_z(s, framebuffer, z_buffer);

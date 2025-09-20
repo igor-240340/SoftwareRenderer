@@ -155,11 +155,12 @@ void draw_line_dda_z(float x0_f, float y0_f, float z0, float x1_f, float y1_f, f
 
 		const float z_slope = (z1 - z0) / (x1 - x0);
 		float z_accum = z0;
-		for (int x = x0; x <= x1; ++x)
+		for (int x = x0; x <= x1; ++x) {
 			if (perform_depth_test(x, y0, z_accum, z_buffer))
 				set_pixel_color(x, y0, color, framebuffer);
 
-		z_accum += z_slope;
+			z_accum += z_slope;
+		}
 	}
 
 	int dy = y1 - y0;
