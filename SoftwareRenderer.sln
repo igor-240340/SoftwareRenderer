@@ -22,6 +22,10 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Transformations", "Transformations\Transformations.vcxproj", "{5D6DC50C-F661-44EE-9BED-06E9F3637399}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TextureMapping", "TextureMapping\TextureMapping.vcxproj", "{AB142FAF-BEAF-406D-A7BD-C34E00AB8306}"
+	ProjectSection(ProjectDependencies) = postProject
+		{5560C250-A33B-4698-BDCA-2812E227AA13} = {5560C250-A33B-4698-BDCA-2812E227AA13}
+		{898711C3-2568-4503-9675-D26CAC06E5F8} = {898711C3-2568-4503-9675-D26CAC06E5F8}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Math", "Math\Math.vcxproj", "{5560C250-A33B-4698-BDCA-2812E227AA13}"
 EndProject

@@ -103,7 +103,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;SFML_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)ThirdParty\SFML\include;$(SolutionDir)ThirdParty\tinyobjloader;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)ThirdParty\SFML\include;$(SolutionDir)ThirdParty\tinyobjloader;$(SolutionDir)Math;$(SolutionDir)Graphics;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -127,17 +127,15 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="graphics.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="Mat4f.cpp" />
-    <ClCompile Include="Vec3f.cpp" />
-    <ClCompile Include="Vec4f.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="graphics.h" />
-    <ClInclude Include="Mat4f.h" />
-    <ClInclude Include="Vec3f.h" />
-    <ClInclude Include="Vec4f.h" />
+    <ProjectReference Include="..\Graphics\Graphics.vcxproj">
+      <Project>{898711c3-2568-4503-9675-d26cac06e5f8}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\Math\Math.vcxproj">
+      <Project>{5560c250-a33b-4698-bdca-2812e227aa13}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
