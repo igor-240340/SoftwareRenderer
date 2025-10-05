@@ -105,6 +105,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalIncludeDirectories>$(SolutionDir)Math;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -129,14 +130,11 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="Mat4f.cpp" />
-    <ClCompile Include="Vec3f.cpp" />
-    <ClCompile Include="Vec4f.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Mat4f.h" />
-    <ClInclude Include="Vec3f.h" />
-    <ClInclude Include="Vec4f.h" />
+    <ProjectReference Include="..\Math\Math.vcxproj">
+      <Project>{5560c250-a33b-4698-bdca-2812e227aa13}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
