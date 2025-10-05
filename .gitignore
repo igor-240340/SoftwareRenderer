@@ -7,3 +7,8 @@ x86/
 
 # LibreOffice lock file.
 **/.~lock*
+
+# Blender backup file.
+**/*.blend1
+
+

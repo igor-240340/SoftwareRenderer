@@ -145,6 +145,7 @@ void rasterize_polygons_solid(const std::vector<Polygon>& polygons, Framebuffer&
 	Mat4f translation = Mat4f::create_translation(Vec3f{ 0.0f, 0.0f, -5.0f });
 	Mat4f rotation_x = Mat4f::create_rotation_x(0.0f * static_cast<float>(std::numbers::pi / 180.0));
 	Mat4f rotation_y = Mat4f::create_rotation_y(0.0f * static_cast<float>(std::numbers::pi / 180.0));
+	Mat4f scale_xy = Mat4f::create_scale_x(0.2f) * Mat4f::create_scale_y(0.2f);
 
 	float fov_vert_rad = static_cast<float>(45.0 * (std::numbers::pi / 180.0));
 	float aspect_ratio = static_cast<float>(framebuffer.w) / framebuffer.h;
@@ -154,7 +155,7 @@ void rasterize_polygons_solid(const std::vector<Polygon>& polygons, Framebuffer&
 	for (Polygon polygon : polygons) {
 		for (Vertex& vertex : polygon.vertices) {
 			Vec4f pos{ vertex.pos };
-			vertex.pos = translation * rotation_y * rotation_x * pos;
+			vertex.pos = translation * rotation_y * rotation_x * scale_xy * pos;
 		}
 
 		std::vector<Vertex> vertices_screen;
