@@ -6,30 +6,36 @@
 
 #include "Vec3f.h"
 
+struct TexCoord {
+	float u;
+	float v;
+};
+
 struct Vertex {
-    Vec3f pos;
+	Vec3f pos;
+	TexCoord tex_coord;
 };
 
 struct Polygon {
-    std::array<Vertex, 3> vertices;
-    sf::Color albedo_color;
-    Vec3f normal;
+	std::array<Vertex, 3> vertices;
+	sf::Color albedo_color;
+	Vec3f normal;
 };
 
 struct Light {
-    Vec3f dir;
+	Vec3f dir;
 };
 
 struct Framebuffer {
-    int w;
-    int h;
-    std::vector<sf::Uint8> rgba_array;
+	int w;
+	int h;
+	std::vector<sf::Uint8> rgba_array;
 };
 
 struct ZBuffer {
-    int w;
-    int h;
-    std::vector<float> depth_array;
+	int w;
+	int h;
+	std::vector<float> depth_array;
 };
 
 void draw_polygon_wireframe(Polygon polygon_screen, Framebuffer& framebuffer);

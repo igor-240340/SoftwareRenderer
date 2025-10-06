@@ -122,18 +122,27 @@ void load_model(std::string model_path, std::vector<Polygon>& polygons) {
 				attrib.vertices[3 * index0.vertex_index + 0],
 				attrib.vertices[3 * index0.vertex_index + 1],
 				attrib.vertices[3 * index0.vertex_index + 2]
+			}, TexCoord{
+				attrib.texcoords[2 * index0.texcoord_index + 0],
+				attrib.texcoords[2 * index0.texcoord_index + 1]
 			} };
 
 			Vertex v1{ Vec3f{
 				attrib.vertices[3 * index1.vertex_index + 0],
 				attrib.vertices[3 * index1.vertex_index + 1],
 				attrib.vertices[3 * index1.vertex_index + 2]
+			}, TexCoord{
+				attrib.texcoords[2 * index1.texcoord_index + 0],
+				attrib.texcoords[2 * index1.texcoord_index + 1]
 			} };
 
 			Vertex v2{ Vec3f{
 				attrib.vertices[3 * index2.vertex_index + 0],
 				attrib.vertices[3 * index2.vertex_index + 1],
 				attrib.vertices[3 * index2.vertex_index + 2]
+			}, TexCoord{
+				attrib.texcoords[2 * index2.texcoord_index + 0],
+				attrib.texcoords[2 * index2.texcoord_index + 1]
 			} };
 
 			polygons.push_back(Polygon{ { v0, v1, v2 }, sf::Color::White });
@@ -166,7 +175,7 @@ void rasterize_polygons_solid(const std::vector<Polygon>& polygons, Framebuffer&
 			Vec4f pos_ndc = pos_clip / pos_clip.w;
 			Vec4f pos_screen = viewport * pos_ndc;
 
-			vertices_screen.push_back(Vertex{ Vec3f{pos_screen} });
+			vertices_screen.push_back(Vertex{ Vec3f{pos_screen}, vertex.tex_coord });
 		}
 		Polygon polygon_screen{ {vertices_screen[0], vertices_screen[1], vertices_screen[2]}, polygon.albedo_color };
 		draw_polygon_solid(polygon_screen, framebuffer, z_buffer);
