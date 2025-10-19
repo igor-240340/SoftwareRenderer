@@ -19,7 +19,7 @@
 
 void load_model(std::string model_path, std::vector<Polygon>& polygons);
 
-void rasterize_polygons_solid(const std::vector<Polygon>& polygons, Framebuffer& framebuffer, ZBuffer& z_buffer);
+void rasterize_polygons_flat_shaded_textured_affine(const std::vector<Polygon>& polygons, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer);
 
 sf::Color get_random_color();
 
@@ -77,7 +77,7 @@ int main() {
 		clear_framebuffer(sf::Color::Blue, frame_buffer);
 		clear_z_buffer(1.0f, z_buffer);
 
-		rasterize_polygons_solid(polygons, frame_buffer, z_buffer);
+		rasterize_polygons_flat_shaded_textured_affine(polygons, light, frame_buffer, z_buffer);
 
 		texture.update(frame_buffer.rgba_array.data());
 
@@ -150,7 +150,7 @@ void load_model(std::string model_path, std::vector<Polygon>& polygons) {
 	}
 }
 
-void rasterize_polygons_solid(const std::vector<Polygon>& polygons, Framebuffer& framebuffer, ZBuffer& z_buffer) {
+void rasterize_polygons_flat_shaded_textured_affine(const std::vector<Polygon>& polygons, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer) {
 	Mat4f translation = Mat4f::create_translation(Vec3f{ 0.0f, 0.0f, -5.0f });
 	Mat4f rotation_x = Mat4f::create_rotation_x(0.0f * static_cast<float>(std::numbers::pi / 180.0));
 	Mat4f rotation_y = Mat4f::create_rotation_y(0.0f * static_cast<float>(std::numbers::pi / 180.0));
@@ -178,6 +178,6 @@ void rasterize_polygons_solid(const std::vector<Polygon>& polygons, Framebuffer&
 			vertices_screen.push_back(Vertex{ Vec3f{pos_screen}, vertex.tex_coord });
 		}
 		Polygon polygon_screen{ {vertices_screen[0], vertices_screen[1], vertices_screen[2]}, polygon.albedo_color };
-		draw_polygon_solid(polygon_screen, framebuffer, z_buffer);
+		draw_polygon_flat_shaded_textured_affine(polygon_screen, light, framebuffer, z_buffer);
 	}
 }
