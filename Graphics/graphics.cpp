@@ -899,7 +899,7 @@ void draw_flat_top_polygon_flat_shaded(Polygon polygon_screen, Framebuffer& fram
 	}
 }
 
-void draw_polygon_flat_shaded_textured_affine(Polygon polygon_screen, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer) {
+void draw_polygon_flat_shaded_textured_affine(Polygon polygon_screen, const sf::Image& texture_image, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer) {
 	Vertex v0 = polygon_screen.vertices[0];
 	Vertex v1 = polygon_screen.vertices[1];
 	Vertex v2 = polygon_screen.vertices[2];
@@ -951,9 +951,9 @@ void draw_polygon_flat_shaded_textured_affine(Polygon polygon_screen, const Ligh
 	const bool flat_bottom = (v1.pos.y == v2.pos.y);
 	const bool flat_top = (v0.pos.y == v1.pos.y);
 	if (flat_bottom)
-		draw_flat_bottom_polygon_flat_shaded_textured_affine(Polygon{ {v0, v1, v2}, lighted_color }, framebuffer, z_buffer);
+		draw_flat_bottom_polygon_flat_shaded_textured_affine(Polygon{ {v0, v1, v2}, lighted_color }, texture_image, framebuffer, z_buffer);
 	else if (flat_top)
-		draw_flat_top_polygon_flat_shaded_textured_affine(Polygon{ {v0, v1, v2}, lighted_color }, framebuffer, z_buffer);
+		draw_flat_top_polygon_flat_shaded_textured_affine(Polygon{ {v0, v1, v2}, lighted_color }, texture_image, framebuffer, z_buffer);
 	else { // Разделяем треугольник на flat_bottom и flat_top.
 		const float inv_slope = (v2.pos.x - v0.pos.x) / (v2.pos.y - v0.pos.y); // Наклон самого длинного ребра.
 		const float height_top_triangle = v1.pos.y - v0.pos.y;
@@ -968,12 +968,12 @@ void draw_polygon_flat_shaded_textured_affine(Polygon polygon_screen, const Ligh
 
 		Vertex intersect{ {intersect_x, intersect_y, intersect_z} };
 
-		draw_flat_bottom_polygon_flat_shaded_textured_affine(Polygon{ {v0, intersect, v1}, lighted_color }, framebuffer, z_buffer);
-		draw_flat_top_polygon_flat_shaded_textured_affine(Polygon{ {intersect, v1, v2}, lighted_color }, framebuffer, z_buffer);
+		draw_flat_bottom_polygon_flat_shaded_textured_affine(Polygon{ {v0, intersect, v1}, lighted_color }, texture_image, framebuffer, z_buffer);
+		draw_flat_top_polygon_flat_shaded_textured_affine(Polygon{ {intersect, v1, v2}, lighted_color }, texture_image, framebuffer, z_buffer);
 	}
 }
 
-void draw_flat_bottom_polygon_flat_shaded_textured_affine(Polygon polygon_screen, Framebuffer& framebuffer, ZBuffer& z_buffer) {
+void draw_flat_bottom_polygon_flat_shaded_textured_affine(Polygon polygon_screen, const sf::Image& texture_image, Framebuffer& framebuffer, ZBuffer& z_buffer) {
 	Vertex v0 = polygon_screen.vertices[0];
 	Vertex v1 = polygon_screen.vertices[1];
 	Vertex v2 = polygon_screen.vertices[2];
@@ -1012,9 +1012,9 @@ void draw_flat_bottom_polygon_flat_shaded_textured_affine(Polygon polygon_screen
 	// NOTE: Постоянный для всех скан-линий.
 	float z_slope_horiz = (z_slope_vert_right - z_slope_vert_left) / (slope_right_inv - slope_left_inv);
 
-	// Slope u-атрибута при интерполяции вдоль скан-линий (постоянный для всех скан-линий).
-	// NOTE: При интерполяции вдоль скан-линии v-атрибут не меняется.
+	// Slope uv-атрибутов при интерполяции вдоль скан-линий (постоянный для всех скан-линий).
 	float u_slope_horiz = (u_slope_vert_right - u_slope_vert_left) / (slope_right_inv - slope_left_inv);
+	float v_slope_horiz = (v_slope_vert_right - v_slope_vert_left) / (slope_right_inv - slope_left_inv);
 
 	// Клиппинг с верхней границей экрана.
 	int y_start = 0;
@@ -1069,18 +1069,21 @@ void draw_flat_bottom_polygon_flat_shaded_textured_affine(Polygon polygon_screen
 
 		// Также интерполируем uv-атрибуты на дельту округления до целого.
 		float cur_frag_u = scan_line_start_u;
-		float cur_frag_v = scan_line_start_v; // Остаётся постоянным в пределах скан-линии.
+		float cur_frag_v = scan_line_start_v;
 		cur_frag_u += u_slope_horiz * scan_line_start_delta;
+		cur_frag_v += v_slope_horiz * scan_line_start_delta;
 		for (int x = scan_line_start_int; x <= scan_line_end_int; x++) {
 			if (perform_depth_test(x, y, cur_frag_z, z_buffer)) {
-				// TODO: Отмасштабировать текстурные координаты фрагмента до размера текстуры,
-				// округлить до целого и извлечь цвет фрагмента.
-				// Затем применить к цвету фрагмента интенсивность освещения текущего полигона.
-				set_pixel_color(x, y, polygon_screen.albedo_color, framebuffer);
+				unsigned int tex_pixel_x = static_cast<unsigned int>(std::round(cur_frag_u * (texture_image.getSize().x - 1)));
+				unsigned int tex_pixel_y = static_cast<unsigned int>(std::round((1.0f - cur_frag_v) * (texture_image.getSize().y - 1)));
+				sf::Color frag_color = texture_image.getPixel(tex_pixel_x, tex_pixel_y);
+				set_pixel_color(x, y, frag_color, framebuffer);
 			}
 
 			cur_frag_z += z_slope_horiz;
+
 			cur_frag_u += u_slope_horiz;
+			cur_frag_v += v_slope_horiz;
 		}
 
 		// Вычисляем начало и конец следующей скан-линии.
@@ -1096,7 +1099,7 @@ void draw_flat_bottom_polygon_flat_shaded_textured_affine(Polygon polygon_screen
 	}
 }
 
-void draw_flat_top_polygon_flat_shaded_textured_affine(Polygon polygon_screen, Framebuffer& framebuffer, ZBuffer& z_buffer) {
+void draw_flat_top_polygon_flat_shaded_textured_affine(Polygon polygon_screen, const sf::Image& texture_image, Framebuffer& framebuffer, ZBuffer& z_buffer) {
 	Vertex v0 = polygon_screen.vertices[0];
 	Vertex v1 = polygon_screen.vertices[1];
 	Vertex v2 = polygon_screen.vertices[2];
