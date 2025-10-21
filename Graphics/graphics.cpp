@@ -1119,13 +1119,27 @@ void draw_flat_top_polygon_flat_shaded_textured_affine(Polygon polygon_screen, c
 	// Z-атрибут начала текущей скан-линии.
 	float scan_line_start_z = v0.pos.z;
 
+	float scan_line_start_u = v0.tex_coord.u;
+	float scan_line_start_v = v0.tex_coord.v;
+
 	// Slope'ы z-атрибутов при интерполяции по боковым рёбрам.
 	float z_slope_vert_left = (v2.pos.z - v0.pos.z) / height;
 	float z_slope_vert_right = (v2.pos.z - v1.pos.z) / height;
 
+	// Slope'ы uv-атрибутов при интерполяции по боковым рёбрам.
+	float u_slope_vert_left = (v2.tex_coord.u - v0.tex_coord.u) / height;
+	float v_slope_vert_left = (v2.tex_coord.v - v0.tex_coord.v) / height;
+
+	float u_slope_vert_right = (v2.tex_coord.u - v1.tex_coord.u) / height;
+	float v_slope_vert_right = (v2.tex_coord.v - v1.tex_coord.v) / height;
+
 	// Slope z-атрибута при интерполяции вдоль скан-линий.
 	// NOTE: Постоянный для всех скан-линий.
 	float z_slope_horiz = (z_slope_vert_right - z_slope_vert_left) / (slope_right_inv - slope_left_inv);
+
+	// Slope uv-атрибутов при интерполяции вдоль скан-линий (постоянный для всех скан-линий).
+	float u_slope_horiz = (u_slope_vert_right - u_slope_vert_left) / (slope_right_inv - slope_left_inv);
+	float v_slope_horiz = (v_slope_vert_right - v_slope_vert_left) / (slope_right_inv - slope_left_inv);
 
 	// Клиппинг с верхней границей экрана.
 	// NOTE: Чтобы быть последовательными, ориентируемся на правую вершину, поскольку по ней определяем
@@ -1153,6 +1167,10 @@ void draw_flat_top_polygon_flat_shaded_textured_affine(Polygon polygon_screen, c
 
 		// Интерполируем z-атрибут начала первой скан-линии.
 		scan_line_start_z += z_slope_vert_left * delta_y;
+
+		// Интерполируем uv-атрибуты начала первой скан-линии.
+		scan_line_start_u += u_slope_vert_left * delta_y;
+		scan_line_start_v += v_slope_vert_left * delta_y;
 	}
 
 	int y_end = static_cast<int>(std::ceil(v2.pos.y) - 1);
@@ -1170,11 +1188,24 @@ void draw_flat_top_polygon_flat_shaded_textured_affine(Polygon polygon_screen, c
 		float cur_frag_z = scan_line_start_z;
 		const float scan_line_start_delta = static_cast<float>(scan_line_start_int) - scan_line_start;
 		cur_frag_z += z_slope_horiz * scan_line_start_delta;
+
+		// Также интерполируем uv-атрибуты на дельту округления до целого.
+		float cur_frag_u = scan_line_start_u;
+		float cur_frag_v = scan_line_start_v;
+		cur_frag_u += u_slope_horiz * scan_line_start_delta;
+		cur_frag_v += v_slope_horiz * scan_line_start_delta;
 		for (int x = scan_line_start_int; x <= scan_line_end_int; x++) {
-			if (perform_depth_test(x, y, cur_frag_z, z_buffer))
-				set_pixel_color(x, y, polygon_screen.albedo_color, framebuffer);
+			if (perform_depth_test(x, y, cur_frag_z, z_buffer)) {
+				unsigned int tex_pixel_x = static_cast<unsigned int>(std::round(cur_frag_u * (texture_image.getSize().x - 1)));
+				unsigned int tex_pixel_y = static_cast<unsigned int>(std::round((1.0f - cur_frag_v) * (texture_image.getSize().y - 1)));
+				sf::Color frag_color = texture_image.getPixel(tex_pixel_x, tex_pixel_y);
+				set_pixel_color(x, y, frag_color, framebuffer);
+			}
 
 			cur_frag_z += z_slope_horiz;
+
+			cur_frag_u += u_slope_horiz;
+			cur_frag_v += v_slope_horiz;
 		}
 
 		// Вычисляем начало и конец следующей скан-линии.
@@ -1183,6 +1214,10 @@ void draw_flat_top_polygon_flat_shaded_textured_affine(Polygon polygon_screen, c
 
 		// Интерполируем z-атрибут начала следующей скан-линии.
 		scan_line_start_z += z_slope_vert_left;
+
+		// Интерполируем uv-атрибуты начала следующей скан-линии.
+		scan_line_start_u += u_slope_vert_left;
+		scan_line_start_v += v_slope_vert_left;
 	}
 }
 
