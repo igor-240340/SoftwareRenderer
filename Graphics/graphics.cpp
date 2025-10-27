@@ -1026,6 +1026,10 @@ void draw_flat_bottom_polygon_flat_shaded_textured_affine(Polygon polygon_screen
 
 		// Интерполируем z-атрибут начала первой скан-линии.
 		scan_line_start_z += z_slope_vert_left * clip_height;
+
+		// Интерполируем uv-атрибуты начала первой скан-линии.
+		scan_line_start_u += u_slope_vert_left * clip_height;
+		scan_line_start_v += v_slope_vert_left * clip_height;
 	}
 	else {
 		// Определяем y-координату первой скан-линии (следуем правилу top-left).
@@ -1154,6 +1158,10 @@ void draw_flat_top_polygon_flat_shaded_textured_affine(Polygon polygon_screen, c
 
 		// Интерполируем z-атрибут начала первой скан-линии.
 		scan_line_start_z += z_slope_vert_left * clip_height;
+
+		// Интерполируем uv-атрибуты начала первой скан-линии.
+		scan_line_start_u += u_slope_vert_left * clip_height;
+		scan_line_start_v += v_slope_vert_left * clip_height;
 	}
 	else {
 		// Первую скан-линию определяем по правой верхней вершине, как описано в замечании
