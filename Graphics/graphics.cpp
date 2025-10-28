@@ -962,11 +962,17 @@ void draw_polygon_flat_shaded_textured_affine(Polygon polygon_screen, const sf::
 		const float intersect_x = v0.pos.x + height_top_triangle * inv_slope;
 		const float intersect_y = v1.pos.y;
 
-		// Определяем z-атрибут точки пересечения, интерполируя вдоль самого длинного ребра.
+		// Интерполируем z-атрибут вдоль самого длинного ребра до точки пересечения.
 		const float z_slope_vert = (v2.pos.z - v0.pos.z) / (v2.pos.y - v0.pos.y);
 		const float intersect_z = v0.pos.z + (height_top_triangle * z_slope_vert);
 
-		Vertex intersect{ {intersect_x, intersect_y, intersect_z} };
+		// Интерполируем uv-атрибуты вдоль самого длинного ребра до точки пересечения.
+		const float u_slope_vert = (v2.tex_coord.u - v0.tex_coord.u) / (v2.pos.y - v0.pos.y);
+		const float v_slope_vert = (v2.tex_coord.v - v0.tex_coord.v) / (v2.pos.y - v0.pos.y);
+		const float intersect_u = v0.tex_coord.u + (height_top_triangle * u_slope_vert);
+		const float intersect_v = v0.tex_coord.v + (height_top_triangle * v_slope_vert);
+
+		Vertex intersect{ {intersect_x, intersect_y, intersect_z}, {intersect_u, intersect_v} };
 
 		draw_flat_bottom_polygon_flat_shaded_textured_affine(Polygon{ {v0, intersect, v1}, lighted_color }, texture_image, framebuffer, z_buffer);
 		draw_flat_top_polygon_flat_shaded_textured_affine(Polygon{ {intersect, v1, v2}, lighted_color }, texture_image, framebuffer, z_buffer);

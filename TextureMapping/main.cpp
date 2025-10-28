@@ -21,7 +21,7 @@ void load_model(std::string model_path, std::vector<Polygon>& polygons);
 
 void rasterize_polygons_flat_shaded_textured_affine(const std::vector<Polygon>& polygons, const sf::Image& texture_image, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer);
 
-void test_screen_parallel_cases(const std::vector<Polygon>& polygons, const sf::Image& texture_image, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer);
+void test(const std::vector<Polygon>& polygons, const sf::Image& texture_image, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer);
 void test_simple_case(const std::vector<Polygon>& polygons, const sf::Image& texture_image, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer);
 void test_clipping_cases(const std::vector<Polygon>& polygons, const sf::Image& texture_image, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer);
 void test_clipping_case_left(const std::vector<Polygon>& polygons, const sf::Image& texture_image, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer);
@@ -32,6 +32,9 @@ void test_clipping_case_left_bottom(const std::vector<Polygon>& polygons, const 
 void test_clipping_case_left_top(const std::vector<Polygon>& polygons, const sf::Image& texture_image, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer);
 void test_clipping_case_right_bottom(const std::vector<Polygon>& polygons, const sf::Image& texture_image, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer);
 void test_clipping_case_right_top(const std::vector<Polygon>& polygons, const sf::Image& texture_image, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer);
+
+// Треугольник образован двумя простыми треугольниками.
+void test_general_case(const std::vector<Polygon>& polygons, const sf::Image& texture_image, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer);
 
 sf::Color get_random_color();
 
@@ -97,7 +100,7 @@ int main() {
 		clear_framebuffer(sf::Color::Blue, framebuffer);
 		clear_z_buffer(1.0f, z_buffer);
 
-		test_screen_parallel_cases(polygons, model_texture_image, light, framebuffer, z_buffer);
+		test(polygons, model_texture_image, light, framebuffer, z_buffer);
 
 		texture.update(framebuffer.rgba_array.data());
 
@@ -202,16 +205,17 @@ void rasterize_polygons_flat_shaded_textured_affine(const std::vector<Polygon>& 
 	}
 }
 
-void test_screen_parallel_cases(const std::vector<Polygon>& polygons, const sf::Image& texture_image, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer) {
+void test(const std::vector<Polygon>& polygons, const sf::Image& texture_image, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer) {
 	test_simple_case(polygons, texture_image, light, framebuffer, z_buffer);
 	test_clipping_cases(polygons, texture_image, light, framebuffer, z_buffer);
+	test_general_case(polygons, texture_image, light, framebuffer, z_buffer);
 }
 
 void test_simple_case(const std::vector<Polygon>& polygons, const sf::Image& texture_image, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer) {
-	Mat4f translation = Mat4f::create_translation(Vec3f{ 0.0f, 0.0f, -5.0f });
+	Mat4f translation = Mat4f::create_translation(Vec3f{ -1.0f, 0.0f, -5.0f });
 	Mat4f rotation_x = Mat4f::create_rotation_x(0.0f * static_cast<float>(std::numbers::pi / 180.0));
 	Mat4f rotation_y = Mat4f::create_rotation_y(0.0f * static_cast<float>(std::numbers::pi / 180.0));
-	Mat4f scale_xy = Mat4f::create_scale_x(0.2f) * Mat4f::create_scale_y(0.2f);
+	Mat4f scale_xy = Mat4f::create_scale_x(0.5f) * Mat4f::create_scale_y(0.5f);
 
 	float fov_vert_rad = static_cast<float>(45.0 * (std::numbers::pi / 180.0));
 	float aspect_ratio = static_cast<float>(framebuffer.w) / framebuffer.h;
@@ -482,6 +486,38 @@ void test_clipping_case_right_top(const std::vector<Polygon>& polygons, const sf
 	Mat4f rotation_x = Mat4f::create_rotation_x(0.0f * static_cast<float>(std::numbers::pi / 180.0));
 	Mat4f rotation_y = Mat4f::create_rotation_y(0.0f * static_cast<float>(std::numbers::pi / 180.0));
 	Mat4f scale_xy = Mat4f::create_scale_x(0.2f) * Mat4f::create_scale_y(0.2f);
+
+	float fov_vert_rad = static_cast<float>(45.0 * (std::numbers::pi / 180.0));
+	float aspect_ratio = static_cast<float>(framebuffer.w) / framebuffer.h;
+	Mat4f proj = Mat4f::create_perspective(fov_vert_rad, aspect_ratio, 0.1f, 10.0f);
+	Mat4f viewport = Mat4f::create_viewport(framebuffer.w, framebuffer.h);
+
+	for (Polygon polygon : polygons) {
+		for (Vertex& vertex : polygon.vertices) {
+			Vec4f pos{ vertex.pos };
+			vertex.pos = translation * rotation_y * rotation_x * scale_xy * pos;
+		}
+
+		std::vector<Vertex> vertices_screen;
+		for (const auto& vertex : polygon.vertices) {
+			Vec4f pos{ vertex.pos };
+
+			Vec4f pos_clip = proj * pos;
+			Vec4f pos_ndc = pos_clip / pos_clip.w;
+			Vec4f pos_screen = viewport * pos_ndc;
+
+			vertices_screen.push_back(Vertex{ Vec3f{pos_screen}, vertex.tex_coord });
+		}
+		Polygon polygon_screen{ {vertices_screen[0], vertices_screen[1], vertices_screen[2]}, polygon.albedo_color };
+		draw_polygon_flat_shaded_textured_affine(polygon_screen, texture_image, light, framebuffer, z_buffer);
+	}
+}
+
+void test_general_case(const std::vector<Polygon>& polygons, const sf::Image& texture_image, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer) {
+	Mat4f translation = Mat4f::create_translation(Vec3f{ 1.0f, 0.0f, -5.0f });
+	Mat4f rotation_x = Mat4f::create_rotation_x(0.0f * static_cast<float>(std::numbers::pi / 180.0));
+	Mat4f rotation_y = Mat4f::create_rotation_y(55.0f * static_cast<float>(std::numbers::pi / 180.0));
+	Mat4f scale_xy = Mat4f::create_scale_x(0.5f) * Mat4f::create_scale_y(0.5f);
 
 	float fov_vert_rad = static_cast<float>(45.0 * (std::numbers::pi / 180.0));
 	float aspect_ratio = static_cast<float>(framebuffer.w) / framebuffer.h;
