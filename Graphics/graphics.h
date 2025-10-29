@@ -52,7 +52,6 @@ void draw_polygon_solid(Polygon polygon_screen, Framebuffer& framebuffer, ZBuffe
 void draw_flat_bottom_polygon_solid(Polygon polygon_screen, Framebuffer& framebuffer, ZBuffer& z_buffer);
 void draw_flat_top_polygon_solid(Polygon polygon_screen, Framebuffer& framebuffer, ZBuffer& z_buffer);
 
-
 void draw_polygon_flat_shaded(Polygon polygon_screen, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer);
 void draw_flat_bottom_polygon_flat_shaded(Polygon polygon_screen, Framebuffer& framebuffer, ZBuffer& z_buffer);
 void draw_flat_top_polygon_flat_shaded(Polygon polygon_screen, Framebuffer& framebuffer, ZBuffer& z_buffer);
