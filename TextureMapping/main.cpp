@@ -190,6 +190,15 @@ void rasterize_polygons_flat_shaded_textured_affine(const std::vector<Polygon>& 
 			vertex.pos = translation * rotation_y * rotation_x * scale_xy * pos;
 		}
 
+		// Вычисляем нормаль полигона.
+		const Vertex& v0 = polygon.vertices[0];
+		const Vertex& v1 = polygon.vertices[1];
+		const Vertex& v2 = polygon.vertices[2];
+
+		const Vec3f edge1 = v1.pos - v0.pos;
+		const Vec3f edge2 = v2.pos - v0.pos;
+		const Vec3f polygon_normal = Vec3f::cross(edge1, edge2).get_normalized();
+
 		std::vector<Vertex> vertices_screen;
 		for (const auto& vertex : polygon.vertices) {
 			Vec4f pos{ vertex.pos };
@@ -200,7 +209,7 @@ void rasterize_polygons_flat_shaded_textured_affine(const std::vector<Polygon>& 
 
 			vertices_screen.push_back(Vertex{ Vec3f{pos_screen}, vertex.tex_coord });
 		}
-		Polygon polygon_screen{ {vertices_screen[0], vertices_screen[1], vertices_screen[2]}, polygon.albedo_color };
+		Polygon polygon_screen{ {vertices_screen[0], vertices_screen[1], vertices_screen[2]}, polygon.albedo_color, polygon_normal };
 		draw_polygon_flat_shaded_textured_affine(polygon_screen, texture_image, light, framebuffer, z_buffer);
 	}
 }
@@ -228,6 +237,15 @@ void test_simple_case(const std::vector<Polygon>& polygons, const sf::Image& tex
 			vertex.pos = translation * rotation_y * rotation_x * scale_xy * pos;
 		}
 
+		// Вычисляем нормаль полигона.
+		const Vertex& v0 = polygon.vertices[0];
+		const Vertex& v1 = polygon.vertices[1];
+		const Vertex& v2 = polygon.vertices[2];
+
+		const Vec3f edge1 = v1.pos - v0.pos;
+		const Vec3f edge2 = v2.pos - v0.pos;
+		const Vec3f polygon_normal = Vec3f::cross(edge1, edge2).get_normalized();
+
 		std::vector<Vertex> vertices_screen;
 		for (const auto& vertex : polygon.vertices) {
 			Vec4f pos{ vertex.pos };
@@ -238,7 +256,7 @@ void test_simple_case(const std::vector<Polygon>& polygons, const sf::Image& tex
 
 			vertices_screen.push_back(Vertex{ Vec3f{pos_screen}, vertex.tex_coord });
 		}
-		Polygon polygon_screen{ {vertices_screen[0], vertices_screen[1], vertices_screen[2]}, polygon.albedo_color };
+		Polygon polygon_screen{ {vertices_screen[0], vertices_screen[1], vertices_screen[2]}, polygon.albedo_color, polygon_normal };
 		draw_polygon_flat_shaded_textured_affine(polygon_screen, texture_image, light, framebuffer, z_buffer);
 	}
 }
@@ -274,6 +292,15 @@ void test_clipping_case_left(const std::vector<Polygon>& polygons, const sf::Ima
 			vertex.pos = translation * rotation_y * rotation_x * scale_xy * pos;
 		}
 
+		// Вычисляем нормаль полигона.
+		const Vertex& v0 = polygon.vertices[0];
+		const Vertex& v1 = polygon.vertices[1];
+		const Vertex& v2 = polygon.vertices[2];
+
+		const Vec3f edge1 = v1.pos - v0.pos;
+		const Vec3f edge2 = v2.pos - v0.pos;
+		const Vec3f polygon_normal = Vec3f::cross(edge1, edge2).get_normalized();
+
 		std::vector<Vertex> vertices_screen;
 		for (const auto& vertex : polygon.vertices) {
 			Vec4f pos{ vertex.pos };
@@ -284,7 +311,7 @@ void test_clipping_case_left(const std::vector<Polygon>& polygons, const sf::Ima
 
 			vertices_screen.push_back(Vertex{ Vec3f{pos_screen}, vertex.tex_coord });
 		}
-		Polygon polygon_screen{ {vertices_screen[0], vertices_screen[1], vertices_screen[2]}, polygon.albedo_color };
+		Polygon polygon_screen{ {vertices_screen[0], vertices_screen[1], vertices_screen[2]}, polygon.albedo_color, polygon_normal };
 		draw_polygon_flat_shaded_textured_affine(polygon_screen, texture_image, light, framebuffer, z_buffer);
 	}
 }
@@ -530,6 +557,15 @@ void test_general_case(const std::vector<Polygon>& polygons, const sf::Image& te
 			vertex.pos = translation * rotation_y * rotation_x * scale_xy * pos;
 		}
 
+		// Вычисляем нормаль полигона.
+		const Vertex& v0 = polygon.vertices[0];
+		const Vertex& v1 = polygon.vertices[1];
+		const Vertex& v2 = polygon.vertices[2];
+
+		const Vec3f edge1 = v1.pos - v0.pos;
+		const Vec3f edge2 = v2.pos - v0.pos;
+		const Vec3f polygon_normal = Vec3f::cross(edge1, edge2).get_normalized();
+
 		std::vector<Vertex> vertices_screen;
 		for (const auto& vertex : polygon.vertices) {
 			Vec4f pos{ vertex.pos };
@@ -540,7 +576,7 @@ void test_general_case(const std::vector<Polygon>& polygons, const sf::Image& te
 
 			vertices_screen.push_back(Vertex{ Vec3f{pos_screen}, vertex.tex_coord });
 		}
-		Polygon polygon_screen{ {vertices_screen[0], vertices_screen[1], vertices_screen[2]}, polygon.albedo_color };
+		Polygon polygon_screen{ {vertices_screen[0], vertices_screen[1], vertices_screen[2]}, polygon.albedo_color, polygon_normal };
 		draw_polygon_flat_shaded_textured_affine(polygon_screen, texture_image, light, framebuffer, z_buffer);
 	}
 }

@@ -58,8 +58,8 @@ void draw_flat_bottom_polygon_flat_shaded(Polygon polygon_screen, Framebuffer& f
 void draw_flat_top_polygon_flat_shaded(Polygon polygon_screen, Framebuffer& framebuffer, ZBuffer& z_buffer);
 
 void draw_polygon_flat_shaded_textured_affine(Polygon polygon_screen, const sf::Image& texture_image, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer);
-void draw_flat_bottom_polygon_flat_shaded_textured_affine(Polygon polygon_screen, const sf::Image& texture_image, Framebuffer& framebuffer, ZBuffer& z_buffer);
-void draw_flat_top_polygon_flat_shaded_textured_affine(Polygon polygon_screen, const sf::Image& texture_image, Framebuffer& framebuffer, ZBuffer& z_buffer);
+void draw_flat_bottom_polygon_flat_shaded_textured_affine(Polygon polygon_screen, const sf::Image& texture_image, float light_intensity, Framebuffer& framebuffer, ZBuffer& z_buffer);
+void draw_flat_top_polygon_flat_shaded_textured_affine(Polygon polygon_screen, const sf::Image& texture_image, float light_intensity, Framebuffer& framebuffer, ZBuffer& z_buffer);
 
 bool perform_depth_test(int frag_x, int frag_y, float frag_z, ZBuffer& z_buffer);
 

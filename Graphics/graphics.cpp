@@ -904,19 +904,7 @@ void draw_polygon_flat_shaded_textured_affine(Polygon polygon_screen, const sf::
 	Vertex v1 = polygon_screen.vertices[1];
 	Vertex v2 = polygon_screen.vertices[2];
 
-	// Моделируем освещение.
-	// TODO: Перенести в Light.
-	const float ambient = 32.0f; // rgb.
 	const float light_intensity = std::max(0.0f, Vec3f::dot(polygon_screen.normal, -light.dir));
-
-	// Засунуть внутрь растеризации треугольников, т.к. цвет нам будет известен только там.
-	const sf::Uint8& r = polygon_screen.albedo_color.r;
-	const sf::Uint8& g = polygon_screen.albedo_color.g;
-	const sf::Uint8& b = polygon_screen.albedo_color.b;
-	const sf::Uint8 r_lighted = static_cast<sf::Uint8>(std::round(std::clamp((ambient * r) / 255.0f + r * light_intensity, 0.0f, 255.0f)));
-	const sf::Uint8 g_lighted = static_cast<sf::Uint8>(std::round(std::clamp((ambient * g) / 255.0f + g * light_intensity, 0.0f, 255.0f)));
-	const sf::Uint8 b_lighted = static_cast<sf::Uint8>(std::round(std::clamp((ambient * b) / 255.0f + b * light_intensity, 0.0f, 255.0f)));
-	const sf::Color lighted_color{ r_lighted, g_lighted, b_lighted };
 
 	// Сортируем вершины по y по возрастанию.
 	if (v0.pos.y > v1.pos.y)
@@ -951,9 +939,9 @@ void draw_polygon_flat_shaded_textured_affine(Polygon polygon_screen, const sf::
 	const bool flat_bottom = (v1.pos.y == v2.pos.y);
 	const bool flat_top = (v0.pos.y == v1.pos.y);
 	if (flat_bottom)
-		draw_flat_bottom_polygon_flat_shaded_textured_affine(Polygon{ {v0, v1, v2}, lighted_color }, texture_image, framebuffer, z_buffer);
+		draw_flat_bottom_polygon_flat_shaded_textured_affine(Polygon{ {v0, v1, v2} }, texture_image, light_intensity, framebuffer, z_buffer);
 	else if (flat_top)
-		draw_flat_top_polygon_flat_shaded_textured_affine(Polygon{ {v0, v1, v2}, lighted_color }, texture_image, framebuffer, z_buffer);
+		draw_flat_top_polygon_flat_shaded_textured_affine(Polygon{ {v0, v1, v2} }, texture_image, light_intensity, framebuffer, z_buffer);
 	else { // Разделяем треугольник на flat_bottom и flat_top.
 		const float inv_slope = (v2.pos.x - v0.pos.x) / (v2.pos.y - v0.pos.y); // Наклон самого длинного ребра.
 		const float height_top_triangle = v1.pos.y - v0.pos.y;
@@ -974,12 +962,12 @@ void draw_polygon_flat_shaded_textured_affine(Polygon polygon_screen, const sf::
 
 		Vertex intersect{ {intersect_x, intersect_y, intersect_z}, {intersect_u, intersect_v} };
 
-		draw_flat_bottom_polygon_flat_shaded_textured_affine(Polygon{ {v0, intersect, v1}, lighted_color }, texture_image, framebuffer, z_buffer);
-		draw_flat_top_polygon_flat_shaded_textured_affine(Polygon{ {intersect, v1, v2}, lighted_color }, texture_image, framebuffer, z_buffer);
+		draw_flat_bottom_polygon_flat_shaded_textured_affine(Polygon{ {v0, intersect, v1} }, texture_image, light_intensity, framebuffer, z_buffer);
+		draw_flat_top_polygon_flat_shaded_textured_affine(Polygon{ {intersect, v1, v2}}, texture_image, light_intensity, framebuffer, z_buffer);
 	}
 }
 
-void draw_flat_bottom_polygon_flat_shaded_textured_affine(Polygon polygon_screen, const sf::Image& texture_image, Framebuffer& framebuffer, ZBuffer& z_buffer) {
+void draw_flat_bottom_polygon_flat_shaded_textured_affine(Polygon polygon_screen, const sf::Image& texture_image, float light_intensity, Framebuffer& framebuffer, ZBuffer& z_buffer) {
 	Vertex v0 = polygon_screen.vertices[0];
 	Vertex v1 = polygon_screen.vertices[1];
 	Vertex v2 = polygon_screen.vertices[2];
@@ -1087,7 +1075,12 @@ void draw_flat_bottom_polygon_flat_shaded_textured_affine(Polygon polygon_screen
 				unsigned int tex_pixel_x = static_cast<unsigned int>(std::round(cur_frag_u * (texture_image.getSize().x - 1)));
 				unsigned int tex_pixel_y = static_cast<unsigned int>(std::round((1.0f - cur_frag_v) * (texture_image.getSize().y - 1)));
 				sf::Color frag_color = texture_image.getPixel(tex_pixel_x, tex_pixel_y);
-				set_pixel_color(x, y, frag_color, framebuffer);
+				// Моделируем освещение.
+				const sf::Uint8 r_lighted = static_cast<sf::Uint8>(std::round(frag_color.r * light_intensity));
+				const sf::Uint8 g_lighted = static_cast<sf::Uint8>(std::round(frag_color.g * light_intensity));
+				const sf::Uint8 b_lighted = static_cast<sf::Uint8>(std::round(frag_color.b * light_intensity));
+				const sf::Color lighted_frag_color{ r_lighted, g_lighted, b_lighted };
+				set_pixel_color(x, y, lighted_frag_color, framebuffer);
 			}
 
 			cur_frag_z += z_slope_horiz;
@@ -1109,7 +1102,7 @@ void draw_flat_bottom_polygon_flat_shaded_textured_affine(Polygon polygon_screen
 	}
 }
 
-void draw_flat_top_polygon_flat_shaded_textured_affine(Polygon polygon_screen, const sf::Image& texture_image, Framebuffer& framebuffer, ZBuffer& z_buffer) {
+void draw_flat_top_polygon_flat_shaded_textured_affine(Polygon polygon_screen, const sf::Image& texture_image, float light_intensity, Framebuffer& framebuffer, ZBuffer& z_buffer) {
 	Vertex v0 = polygon_screen.vertices[0];
 	Vertex v1 = polygon_screen.vertices[1];
 	Vertex v2 = polygon_screen.vertices[2];
@@ -1213,7 +1206,12 @@ void draw_flat_top_polygon_flat_shaded_textured_affine(Polygon polygon_screen, c
 				unsigned int tex_pixel_x = static_cast<unsigned int>(std::round(cur_frag_u * (texture_image.getSize().x - 1)));
 				unsigned int tex_pixel_y = static_cast<unsigned int>(std::round((1.0f - cur_frag_v) * (texture_image.getSize().y - 1)));
 				sf::Color frag_color = texture_image.getPixel(tex_pixel_x, tex_pixel_y);
-				set_pixel_color(x, y, frag_color, framebuffer);
+				// Моделируем освещение.
+				const sf::Uint8 r_lighted = static_cast<sf::Uint8>(std::round(frag_color.r * light_intensity));
+				const sf::Uint8 g_lighted = static_cast<sf::Uint8>(std::round(frag_color.g * light_intensity));
+				const sf::Uint8 b_lighted = static_cast<sf::Uint8>(std::round(frag_color.b * light_intensity));
+				const sf::Color lighted_frag_color{ r_lighted, g_lighted, b_lighted };
+				set_pixel_color(x, y, lighted_frag_color, framebuffer);
 			}
 
 			cur_frag_z += z_slope_horiz;
