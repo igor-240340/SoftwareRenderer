@@ -24,6 +24,7 @@ void rasterize_polygons_solid(const std::vector<Polygon>& polygons, Framebuffer&
 void rasterize_polygons_flat_shaded(const std::vector<Polygon>& polygons, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer);
 
 void rasterize_polygons_flat_shaded_and_rotate(const std::vector<Polygon>& polygons, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer, float angle_rad);
+void rasterize_polygons_flat_shaded_textured_affine(const std::vector<Polygon>& polygons, const sf::Image& texture_image, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer, const Mat4f& transformations);
 
 void rasterize_polygons_wireframe_ortho(const std::vector<Polygon>& polygons, Framebuffer& framebuffer);
 void rasterize_polygons_solid_ortho(const std::vector<Polygon>& polygons, Framebuffer& framebuffer, ZBuffer& z_buffer);
@@ -80,8 +81,17 @@ int main() {
     //const std::string model_path = "data/skull/skull.obj";
     //const std::string model_path = "data/blender_monkey/blender_monkey.obj";
     //const std::string model_path = "data/pig/pig.obj";
-    const std::string model_path = "data/plane/plane.obj";
+    //const std::string model_path = "data/plane/plane.obj";
+    const std::string model_path = "data/new_balance/nb574.obj";
     load_model(model_path, polygons);
+
+    // Читаем текстуру модели.
+    sf::Texture model_texture;
+    if (!model_texture.loadFromFile("data/new_balance/nb574.jpeg")) {
+        std::cout << "sfml: model_texture.loadFromFile() failed\n";
+        return 1;
+    }
+    sf::Image model_texture_image = model_texture.copyToImage();
 
     auto measure_start = high_res_clock::now();
     int frame_count = 0;
@@ -96,7 +106,7 @@ int main() {
                 window.close();
         }
 
-        clear_framebuffer(sf::Color::Blue, frame_buffer);
+        clear_framebuffer(sf::Color::White, frame_buffer);
         clear_z_buffer(1.0f, z_buffer);
 
         //debug_z_fighting(frame_buffer, z_buffer);
@@ -107,11 +117,18 @@ int main() {
 
         //rasterize_polygons_flat_shaded_and_rotate(polygons, light, frame_buffer, z_buffer, angle_rad_accum);
 
+        Mat4f translation = Mat4f::create_translation(Vec3f{ 0.0f, 0.0f, -5.0f });
+        Mat4f rotation_x = Mat4f::create_rotation_x(-90.0f * static_cast<float>(std::numbers::pi / 180.0));
+        Mat4f rotation_y = Mat4f::create_rotation_y(angle_rad_accum);
+		Mat4f scale_xy = Mat4f::create_scale_x(0.4f) * Mat4f::create_scale_y(0.4f) * Mat4f::create_scale_z(0.4f);
+        Mat4f transformations = translation * rotation_y * rotation_x * scale_xy;
+        rasterize_polygons_flat_shaded_textured_affine(polygons, model_texture_image, light, frame_buffer, z_buffer, transformations);
+
         //rasterize_polygons_wireframe_ortho(polygons, frame_buffer);
         //rasterize_polygons_solid_ortho(polygons, frame_buffer, z_buffer);
         //rasterize_polygons_flat_shaded_ortho(polygons, light, frame_buffer, z_buffer);
 
-        demonstrate_gimbal_lock(polygons, light, frame_buffer, z_buffer);
+        //demonstrate_gimbal_lock(polygons, light, frame_buffer, z_buffer);
 
         texture.update(frame_buffer.rgba_array.data());
 
@@ -138,42 +155,50 @@ int main() {
 }
 
 void load_model(std::string model_path, std::vector<Polygon>& polygons) {
-    tinyobj::attrib_t attrib;
-    std::vector<tinyobj::shape_t> shapes;
-    std::vector<tinyobj::material_t> materials;
-    std::string err;
+	tinyobj::attrib_t attrib;
+	std::vector<tinyobj::shape_t> shapes;
+	std::vector<tinyobj::material_t> materials;
+	std::string err;
 
-    if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &err, model_path.c_str()))
-        std::cout << "tinyobjloader: " << err << '\n';
+	if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &err, model_path.c_str()))
+		std::cout << "tinyobjloader: " << err << '\n';
 
-    for (const auto& shape : shapes) {
-        for (size_t i = 0; i <= shape.mesh.indices.size() - 3; i += 3) {
-            const auto& index0 = shape.mesh.indices[i + 0];
-            const auto& index1 = shape.mesh.indices[i + 1];
-            const auto& index2 = shape.mesh.indices[i + 2];
+	for (const auto& shape : shapes) {
+		for (size_t i = 0; i <= shape.mesh.indices.size() - 3; i += 3) {
+			auto& index0 = shape.mesh.indices[i + 0];
+			auto& index1 = shape.mesh.indices[i + 1];
+			auto& index2 = shape.mesh.indices[i + 2];
 
-            const Vertex v0{ Vec3f{
-                attrib.vertices[3 * index0.vertex_index + 0],
-                attrib.vertices[3 * index0.vertex_index + 1],
-                attrib.vertices[3 * index0.vertex_index + 2]
-            } };
+			Vertex v0{ Vec3f{
+				attrib.vertices[3 * index0.vertex_index + 0],
+				attrib.vertices[3 * index0.vertex_index + 1],
+				attrib.vertices[3 * index0.vertex_index + 2]
+			}, TexCoord{
+				attrib.texcoords[2 * index0.texcoord_index + 0],
+				attrib.texcoords[2 * index0.texcoord_index + 1]
+			} };
 
-            const Vertex v1{ Vec3f{
-                attrib.vertices[3 * index1.vertex_index + 0],
-                attrib.vertices[3 * index1.vertex_index + 1],
-                attrib.vertices[3 * index1.vertex_index + 2]
-            } };
+			Vertex v1{ Vec3f{
+				attrib.vertices[3 * index1.vertex_index + 0],
+				attrib.vertices[3 * index1.vertex_index + 1],
+				attrib.vertices[3 * index1.vertex_index + 2]
+			}, TexCoord{
+				attrib.texcoords[2 * index1.texcoord_index + 0],
+				attrib.texcoords[2 * index1.texcoord_index + 1]
+			} };
 
-            const Vertex v2{ Vec3f{
-                attrib.vertices[3 * index2.vertex_index + 0],
-                attrib.vertices[3 * index2.vertex_index + 1],
-                attrib.vertices[3 * index2.vertex_index + 2]
-            } };
+			Vertex v2{ Vec3f{
+				attrib.vertices[3 * index2.vertex_index + 0],
+				attrib.vertices[3 * index2.vertex_index + 1],
+				attrib.vertices[3 * index2.vertex_index + 2]
+			}, TexCoord{
+				attrib.texcoords[2 * index2.texcoord_index + 0],
+				attrib.texcoords[2 * index2.texcoord_index + 1]
+			} };
 
-            //polygons.push_back(Polygon{ { v0, v1, v2 }, get_random_color() });
-            polygons.push_back(Polygon{ { v0, v1, v2 }, sf::Color::White });
-        }
-    }
+			polygons.push_back(Polygon{ { v0, v1, v2 }, sf::Color::White });
+		}
+	}
 }
 
 void rasterize_polygons_wireframe(const std::vector<Polygon>& polygons, Framebuffer& framebuffer) {
@@ -325,6 +350,43 @@ void rasterize_polygons_flat_shaded_and_rotate(const std::vector<Polygon>& polyg
             polygon_normal
         };
         draw_polygon_flat_shaded(polygon_screen, light, framebuffer, z_buffer);
+    }
+}
+
+void rasterize_polygons_flat_shaded_textured_affine(const std::vector<Polygon>& polygons, const sf::Image& texture_image, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer, const Mat4f& transformations) {
+    float fov_vert_rad = static_cast<float>(45.0 * (std::numbers::pi / 180.0));
+    float aspect_ratio = static_cast<float>(framebuffer.w) / framebuffer.h;
+    Mat4f proj = Mat4f::create_perspective(fov_vert_rad, aspect_ratio, 0.1f, 10.0f);
+    Mat4f viewport = Mat4f::create_viewport(framebuffer.w, framebuffer.h);
+
+    for (Polygon polygon : polygons) {
+        for (Vertex& vertex : polygon.vertices) {
+            Vec4f pos{ vertex.pos };
+            //vertex.pos = translation * rotation_y * rotation_x * scale_xy * pos;
+            vertex.pos = transformations * pos;
+        }
+
+        // Вычисляем нормаль полигона.
+        const Vertex& v0 = polygon.vertices[0];
+        const Vertex& v1 = polygon.vertices[1];
+        const Vertex& v2 = polygon.vertices[2];
+
+        const Vec3f edge1 = v1.pos - v0.pos;
+        const Vec3f edge2 = v2.pos - v0.pos;
+        const Vec3f polygon_normal = Vec3f::cross(edge1, edge2).get_normalized();
+
+        std::vector<Vertex> vertices_screen;
+        for (const auto& vertex : polygon.vertices) {
+            Vec4f pos{ vertex.pos };
+
+            Vec4f pos_clip = proj * pos;
+            Vec4f pos_ndc = pos_clip / pos_clip.w;
+            Vec4f pos_screen = viewport * pos_ndc;
+
+            vertices_screen.push_back(Vertex{ Vec3f{pos_screen}, vertex.tex_coord });
+        }
+        Polygon polygon_screen{ {vertices_screen[0], vertices_screen[1], vertices_screen[2]}, polygon.albedo_color, polygon_normal };
+        draw_polygon_flat_shaded_textured_affine(polygon_screen, texture_image, light, framebuffer, z_buffer);
     }
 }
 
