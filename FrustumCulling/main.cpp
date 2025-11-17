@@ -24,27 +24,12 @@ void rasterize_polygons_flat_shaded_textured_affine(const std::vector<Polygon>& 
 void test(const sf::Image& texture_image, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer);
 void test_left_plane(const sf::Image& texture_image, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer);
 void test_right_plane(const sf::Image& texture_image, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer);
+void test_bottom_plane(const sf::Image& texture_image, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer);
 
 /*
-void test_bottom_plane(const sf::Image& texture_image, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer);
-void test_triangle_7(const sf::Image& texture_image, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer);
-void test_triangle_8(const sf::Image& texture_image, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer);
-void test_triangle_9(const sf::Image& texture_image, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer);
-
 void test_far_plane(const sf::Image& texture_image, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer);
-void test_triangle_10(const sf::Image& texture_image, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer);
-void test_triangle_11(const sf::Image& texture_image, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer);
-void test_triangle_12(const sf::Image& texture_image, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer);
-
 void test_top_plane(const sf::Image& texture_image, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer);
-void test_triangle_13(const sf::Image& texture_image, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer);
-void test_triangle_14(const sf::Image& texture_image, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer);
-void test_triangle_15(const sf::Image& texture_image, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer);
-
 void test_near_plane(const sf::Image& texture_image, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer);
-void test_triangle_16(const sf::Image& texture_image, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer);
-void test_triangle_17(const sf::Image& texture_image, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer);
-void test_triangle_18(const sf::Image& texture_image, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer);
 */
 
 sf::Color get_random_color();
@@ -219,7 +204,7 @@ void rasterize_polygons_flat_shaded_textured_affine(const std::vector<Polygon>& 
 void test(const sf::Image& texture_image, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer) {
 	test_left_plane(texture_image, light, framebuffer, z_buffer);
 	test_right_plane(texture_image, light, framebuffer, z_buffer);
-	//test_bottom_plane(texture_image, light, framebuffer, z_buffer);
+	test_bottom_plane(texture_image, light, framebuffer, z_buffer);
 	//test_far_plane(texture_image, light, framebuffer, z_buffer);
 	//test_top_plane(texture_image, light, framebuffer, z_buffer);
 	//test_near_plane(texture_image, light, framebuffer, z_buffer);
@@ -277,6 +262,33 @@ void test_right_plane(const sf::Image& texture_image, const Light& light, Frameb
 			Vertex{ Vec3f{ 4.0f, -0.6218971824187f, -5.0f}, TexCoord{1.0f, 0.0f} },
 			Vertex{ Vec3f{ 5.0f, 1.0f, -6.0f}, TexCoord{0.0f, 1.0f} },
 			Vertex{ Vec3f{ 5.0f, 0.0f, -7.0f}, TexCoord{0.0f, 0.0f} }
+		} }
+	};
+	rasterize_polygons_flat_shaded_textured_affine(polygons, texture_image, light, framebuffer, z_buffer, Mat4f::create_identity());
+}
+
+void test_bottom_plane(const sf::Image& texture_image, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer) {
+	float ratio = static_cast<float>(framebuffer.w) / framebuffer.h;
+	float fov_vert_half_rad = 45.0f / 2.0f * static_cast<float>(std::numbers::pi / 180.0);
+	float d = 1.0f / std::tan(fov_vert_half_rad);
+	float frustum_y_slope_bottom = 1.0f / d;
+
+	// NOTE: Зазор внизу размером в пиксел из-за правила top-left.
+	std::vector<Polygon> polygons{
+		Polygon{ {
+			Vertex{ Vec3f{ -1.858282645968f, (-6.085126393315f * frustum_y_slope_bottom), -6.085126393315f}, TexCoord{1.0f, 0.0f}},
+			Vertex{ Vec3f{ 0.7352062124053f, (-5.505439791798f * frustum_y_slope_bottom), -5.505439791798f}, TexCoord{0.0f, 0.0f} },
+			Vertex{ Vec3f{ 1.0f, -0.810353854192f, -5.0f}, TexCoord{0.0f, 1.0f} }
+		} },
+		Polygon{{
+			Vertex{ Vec3f{ -0.611765941602636f, -3.0f, -3.45735162850054f}, TexCoord{1.0f, 0.0f} },
+			Vertex{ Vec3f{ 0.08223654515212f, (-3.731572453755f * frustum_y_slope_bottom), -3.731572453755f}, TexCoord{0.0f, 1.0f}},
+			Vertex{ Vec3f{ -1.418146581357, (-4.685105569482f * frustum_y_slope_bottom), -4.685105569482f}, TexCoord{0.0f, 0.0f}}
+		} },
+		Polygon{ {
+			Vertex{ Vec3f{ 1.328620049023f, -3.0f, -5.999326675952f}, TexCoord{1.0f, 0.0f} },
+			Vertex{ Vec3f{ 2.0f, -3.446994621953f, -5.0f}, TexCoord{0.0f, 1.0f} },
+			Vertex{ Vec3f{ 0.699474521393f, -3.817596067521f, -4.336625288131f}, TexCoord{0.0f, 0.0f} }
 		} }
 	};
 	rasterize_polygons_flat_shaded_textured_affine(polygons, texture_image, light, framebuffer, z_buffer, Mat4f::create_identity());
