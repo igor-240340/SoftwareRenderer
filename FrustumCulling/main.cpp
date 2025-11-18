@@ -25,12 +25,9 @@ void test(const sf::Image& texture_image, const Light& light, Framebuffer& frame
 void test_left_plane(const sf::Image& texture_image, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer);
 void test_right_plane(const sf::Image& texture_image, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer);
 void test_bottom_plane(const sf::Image& texture_image, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer);
-
-/*
 void test_far_plane(const sf::Image& texture_image, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer);
 void test_top_plane(const sf::Image& texture_image, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer);
 void test_near_plane(const sf::Image& texture_image, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer);
-*/
 
 sf::Color get_random_color();
 
@@ -205,9 +202,9 @@ void test(const sf::Image& texture_image, const Light& light, Framebuffer& frame
 	test_left_plane(texture_image, light, framebuffer, z_buffer);
 	test_right_plane(texture_image, light, framebuffer, z_buffer);
 	test_bottom_plane(texture_image, light, framebuffer, z_buffer);
-	//test_far_plane(texture_image, light, framebuffer, z_buffer);
-	//test_top_plane(texture_image, light, framebuffer, z_buffer);
-	//test_near_plane(texture_image, light, framebuffer, z_buffer);
+	test_far_plane(texture_image, light, framebuffer, z_buffer);
+	test_top_plane(texture_image, light, framebuffer, z_buffer);
+	test_near_plane(texture_image, light, framebuffer, z_buffer);
 }
 
 void test_left_plane(const sf::Image& texture_image, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer) {
@@ -289,6 +286,74 @@ void test_bottom_plane(const sf::Image& texture_image, const Light& light, Frame
 			Vertex{ Vec3f{ 1.328620049023f, -3.0f, -5.999326675952f}, TexCoord{1.0f, 0.0f} },
 			Vertex{ Vec3f{ 2.0f, -3.446994621953f, -5.0f}, TexCoord{0.0f, 1.0f} },
 			Vertex{ Vec3f{ 0.699474521393f, -3.817596067521f, -4.336625288131f}, TexCoord{0.0f, 0.0f} }
+		} }
+	};
+	rasterize_polygons_flat_shaded_textured_affine(polygons, texture_image, light, framebuffer, z_buffer, Mat4f::create_identity());
+}
+
+void test_far_plane(const sf::Image& texture_image, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer) {
+	std::vector<Polygon> polygons{
+		Polygon{ {
+			Vertex{ Vec3f{ 0.5716086222617f, -0.3854761410111f, -8.939026370317f}, TexCoord{ 1.0f, 0.0f } },
+			Vertex{ Vec3f{ -1.0f, 1.0f, -11.0f}, TexCoord{ 0.0f, 1.0f } },
+			Vertex{ Vec3f{ -3.0f, -1.0f, -11.0f}, TexCoord{ 0.0f, 0.0f } }
+		} },
+		Polygon{{
+			Vertex{ Vec3f{ 1.55696250758f, -2.138365813608f, -10.0f }, TexCoord{ 1.0f, 0.0f } },
+			Vertex{ Vec3f{ 0.495364722236f, -1.252964020528f, -10.0f }, TexCoord{ 0.0f, 0.0f } },
+			Vertex{ Vec3f{ 3.0f, 1.473987626349f, -12.0f }, TexCoord{ 0.0f, 1.0f } }
+		} },
+		Polygon{ {
+			Vertex{ Vec3f{ 1.022607398929f, -1.0f, -12.14598292332f }, TexCoord{ 1.0f, 0.0f } },
+			Vertex{ Vec3f{ 1.113168568717f, 0.0f, -13.59886809838f }, TexCoord{ 0.0f, 1.0f } },
+			Vertex{ Vec3f{ -1.0f, 0.51364687855f, -12.0f }, TexCoord{ 0.0f, 0.0f } }
+		} }
+	};
+	rasterize_polygons_flat_shaded_textured_affine(polygons, texture_image, light, framebuffer, z_buffer, Mat4f::create_identity());
+}
+
+void test_top_plane(const sf::Image& texture_image, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer) {
+	float ratio = static_cast<float>(framebuffer.w) / framebuffer.h;
+	float fov_vert_half_rad = 45.0f / 2.0f * static_cast<float>(std::numbers::pi / 180.0);
+	float d = 1.0f / std::tan(fov_vert_half_rad);
+	float frustum_y_slope_top = -1.0f / d;
+
+	std::vector<Polygon> polygons{
+		Polygon{ {
+			Vertex{ Vec3f{ -1.898558064103f, (-7.690017951226f * frustum_y_slope_top), -7.690017951226f}, TexCoord{0.0f, 0.0f}},
+			Vertex{ Vec3f{ 1.079475593681f, 1.283631622118f, -7.236743152658f }, TexCoord{ 1.0f, 0.0f } },
+			Vertex{ Vec3f{ 0.3946101652076f, (-8.462591432976f * frustum_y_slope_top), -8.462591432976f }, TexCoord{ 0.0f, 1.0f } }
+		} },
+		Polygon{{
+			Vertex{ Vec3f{ -2.492745060277f, (-9.000477914793f * frustum_y_slope_top), -9.000477914793f }, TexCoord{1.0f, 0.0f}},
+			Vertex{ Vec3f{ -2.319811456021f, 6.284416657732f, -8.178969032108f }, TexCoord{ 0.0f, 1.0f } },
+			Vertex{ Vec3f{ -4.01132509391f, (-8.51727174574f * frustum_y_slope_top), -8.51727174574f }, TexCoord{ 0.0f, 0.0f } }
+		} },
+		Polygon{ {
+			Vertex{ Vec3f{ 2.36657882628f, 4.774984080813f, -8.971338931448f }, TexCoord{ 1.0f, 0.0f } },
+			Vertex{ Vec3f{ 2.124923573587f, 6.0f, -7.749345497198f }, TexCoord{ 0.0f, 1.0f } },
+			Vertex{ Vec3f{ 3.312490602885f, 6.790319398473f, -8.489404246239f }, TexCoord{ 0.0f, 0.0f } }
+		} }
+	};
+	rasterize_polygons_flat_shaded_textured_affine(polygons, texture_image, light, framebuffer, z_buffer, Mat4f::create_identity());
+}
+
+void test_near_plane(const sf::Image& texture_image, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer) {
+	std::vector<Polygon> polygons{
+		Polygon{ {
+			Vertex{ Vec3f{ 0.03004302807268f, -0.03079439854602f, -0.1f}, TexCoord{ 1.0f, 0.0f } },
+			Vertex{ Vec3f{ 0.1695228460975f, 0.265145655819f, -0.8884041899108f}, TexCoord{ 0.0f, 1.0f } },
+			Vertex{ Vec3f{ -0.02314468899291f, -0.00943687955083f, -0.1f}, TexCoord{ 0.0f, 0.0f } }
+		} },
+		Polygon{{
+			Vertex{ Vec3f{ -0.03673981136543f, 0.02163498245249f, -0.1f }, TexCoord{ 0.0f, 1.0f } },
+			Vertex{ Vec3f{ 0.0f, 0.0f, -0.1f }, TexCoord{ 1.0f, 0.0f } },
+			Vertex{ Vec3f{ 0.02501264254134f, 0.09004401692674f, 0.00322892925032f }, TexCoord{ 0.0f, 0.0f } }
+		} },
+		Polygon{ {
+			Vertex{ Vec3f{ -0.02048465397418f, 0.0f, -0.04692367667554f }, TexCoord{ 1.0f, 0.0f } },
+			Vertex{ Vec3f{ -0.0369087383514f, 0.04124915732732f, 0.02059667852138f }, TexCoord{ 0.0f, 1.0f } },
+			Vertex{ Vec3f{ -0.04389029335975f, -0.01150741970691f, -0.04225343693929f }, TexCoord{ 0.0f, 0.0f } }
 		} }
 	};
 	rasterize_polygons_flat_shaded_textured_affine(polygons, texture_image, light, framebuffer, z_buffer, Mat4f::create_identity());
