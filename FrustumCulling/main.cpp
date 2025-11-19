@@ -5,6 +5,7 @@
 #include <random>
 #include <algorithm>
 #include <chrono>
+#include <bitset>
 
 #include <SFML/Graphics.hpp>
 
@@ -19,8 +20,6 @@
 
 void load_model(std::string model_path, std::vector<Polygon>& polygons);
 
-void rasterize_polygons_flat_shaded_textured_affine(const std::vector<Polygon>& polygons, const sf::Image& texture_image, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer, const Mat4f& transformations);
-
 void test(const sf::Image& texture_image, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer);
 void test_left_plane(const sf::Image& texture_image, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer);
 void test_right_plane(const sf::Image& texture_image, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer);
@@ -28,6 +27,8 @@ void test_bottom_plane(const sf::Image& texture_image, const Light& light, Frame
 void test_far_plane(const sf::Image& texture_image, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer);
 void test_top_plane(const sf::Image& texture_image, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer);
 void test_near_plane(const sf::Image& texture_image, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer);
+
+void rasterize_polygons_flat_shaded_textured_affine(const std::vector<Polygon>& polygons, const sf::Image& texture_image, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer, const Mat4f& transformations);
 
 sf::Color get_random_color();
 
@@ -161,6 +162,8 @@ void load_model(std::string model_path, std::vector<Polygon>& polygons) {
 	}
 }
 
+// TODO: Когда появится камера, нужно будет сначала перевести геометрию в пространство камеры.
+// То есть, сперва сделать умножение на MV.
 void rasterize_polygons_flat_shaded_textured_affine(const std::vector<Polygon>& polygons, const sf::Image& texture_image, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer, const Mat4f& transformations) {
 	float fov_vert_rad = static_cast<float>(45.0 * (std::numbers::pi / 180.0));
 	float aspect_ratio = static_cast<float>(framebuffer.w) / framebuffer.h;
@@ -173,6 +176,52 @@ void rasterize_polygons_flat_shaded_textured_affine(const std::vector<Polygon>& 
 			//vertex.pos = translation * rotation_y * rotation_x * scale_xy * pos;
 			vertex.pos = transformations * pos;
 		}
+
+		// Frustum culling.
+		enum FrustumPlaneBit {
+			left,
+			right,
+			bottom,
+			top,
+			near,
+			far
+		};
+		float ratio = static_cast<float>(framebuffer.w) / framebuffer.h;
+		float fov_vert_half_rad = 45.0f / 2.0f * static_cast<float>(std::numbers::pi / 180.0);
+		float d = 1.0f / std::tan(fov_vert_half_rad);
+		float frustum_x_slope_left = ratio / d;
+		float frustum_x_slope_right = -ratio / d;
+		float frustum_y_slope_bottom = 1.0f / d;
+		float frustum_y_slope_top = -1.0f / d;
+		std::array<std::bitset<6>, 3> region_codes{};
+		for (int i = 0; i < polygon.vertices.size(); ++i) {
+			// Куллинг с левой плоскостью фрустума.
+			float left_lim = polygon.vertices[i].pos.z * frustum_x_slope_left;
+			region_codes[i].set(FrustumPlaneBit::left, polygon.vertices[i].pos.x <= left_lim);
+
+			// Куллинг с правой плоскостью фрустума.
+			float right_lim = polygon.vertices[i].pos.z * frustum_x_slope_right;
+			region_codes[i].set(FrustumPlaneBit::right, polygon.vertices[i].pos.x >= right_lim);
+
+			// Куллинг с нижней плоскостью фрустума.
+			float bottom_lim = polygon.vertices[i].pos.z * frustum_y_slope_bottom;
+			region_codes[i].set(FrustumPlaneBit::bottom, polygon.vertices[i].pos.y <= bottom_lim);
+
+			// Куллинг с верхней плоскостью фрустума.
+			float top_lim = polygon.vertices[i].pos.z * frustum_y_slope_top;
+			region_codes[i].set(FrustumPlaneBit::top, polygon.vertices[i].pos.y >= top_lim);
+
+			// Куллинг с дальней плоскосотью фрустума.
+			float far_lim = -10.0f;
+			region_codes[i].set(FrustumPlaneBit::far, polygon.vertices[i].pos.z <= far_lim);
+
+			// Куллинг с ближней плоскосотью фрустума.
+			float near_lim = -0.1f;
+			region_codes[i].set(FrustumPlaneBit::near, polygon.vertices[i].pos.z >= near_lim);
+		}
+		// Все три вершины находятся за пределами общей плоскости - отбрасываем полигон.
+		if ((region_codes[0] & region_codes[1] & region_codes[2]).any())
+			continue;
 
 		// Вычисляем нормаль полигона.
 		const Vertex& v0 = polygon.vertices[0];
@@ -215,19 +264,19 @@ void test_left_plane(const sf::Image& texture_image, const Light& light, Framebu
 
 	std::vector<Polygon> polygons{
 		Polygon{ {
-			Vertex{ Vec3f{ -2.0f, 1.0f, -7.0f}, TexCoord{1.0f, 0.0f} },
-			Vertex{ Vec3f{ (-8.39680419252f * frustum_x_slope_left), 2.663429555932f, -8.39680419252f}, TexCoord{0.0f, 1.0f} },
-			Vertex{ Vec3f{ (-7.750896177711f * frustum_x_slope_left), 0.3975463449545f, -7.750896177711f}, TexCoord{0.0f, 0.0f} }
+			Vertex{ Vec3f{ -2.0f, 1.0f, -7.0f }, TexCoord{ 1.0f, 0.0f } },
+			Vertex{ Vec3f{ (-8.39680419252f * frustum_x_slope_left), 2.663429555932f, -8.39680419252f }, TexCoord{ 0.0f, 1.0f } },
+			Vertex{ Vec3f{ (-7.750896177711f * frustum_x_slope_left), 0.3975463449545f, -7.750896177711f }, TexCoord{ 0.0f, 0.0f } }
 		} },
 		Polygon{ {
-			Vertex{ Vec3f{ (-5.484101989121f * frustum_x_slope_left), -1.581996699731f, -5.484101989121f}, TexCoord{1.0f, 0.0f} },
-			Vertex{ Vec3f{ (-5.719705745321f * frustum_x_slope_left), -0.5f, -5.719705745321f}, TexCoord{0.0f, 1.0f} },
-			Vertex{ Vec3f{ -5.243424042825f, 2.0f, -5.012349197755f}, TexCoord{0.0f, 0.0f} }
+			Vertex{ Vec3f{ (-5.484101989121f * frustum_x_slope_left), -1.581996699731f, -5.484101989121f }, TexCoord{ 1.0f, 0.0f } },
+			Vertex{ Vec3f{ (-5.719705745321f * frustum_x_slope_left), -0.5f, -5.719705745321f }, TexCoord{ 0.0f, 1.0f } },
+			Vertex{ Vec3f{ -5.243424042825f, 2.0f, -5.012349197755f }, TexCoord{ 0.0f, 0.0f } }
 		} },
 		Polygon{ {
-			Vertex{ Vec3f{ -2.0f, 1.0f, -7.0f}, TexCoord{1.0f, 0.0f} },
-			Vertex{ Vec3f{ -4.637426902844f, 2.663429555932f, -8.39680419252f}, TexCoord{0.0f, 1.0f} },
-			Vertex{ Vec3f{ -4.280701756471f, 0.3975463449545f, -7.750896177711f}, TexCoord{0.0f, 0.0f} }
+			Vertex{ Vec3f{ -5.0f, 0.0f, -5.0f }, TexCoord{ 1.0f, 0.0f } },
+			Vertex{ Vec3f{ -4.0f, 2.290290837199f, -6.0f }, TexCoord{ 0.0f, 1.0f } },
+			Vertex{ Vec3f{ -5.0f, 0.0f, -7.0f }, TexCoord{ 0.0f, 0.0f } }
 		} }
 	};
 	rasterize_polygons_flat_shaded_textured_affine(polygons, texture_image, light, framebuffer, z_buffer, Mat4f::create_identity());
