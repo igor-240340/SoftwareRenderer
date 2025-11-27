@@ -170,7 +170,6 @@ void rasterize_polygons_flat_shaded_textured_affine(const std::vector<Polygon>& 
 	for (Polygon polygon : polygons) {
 		for (Vertex& vertex : polygon.vertices) {
 			Vec4f pos{ vertex.pos };
-			//vertex.pos = translation * rotation_y * rotation_x * scale_xy * pos;
 			vertex.pos = transformations * pos;
 		}
 
@@ -220,11 +219,35 @@ void rasterize_polygons_flat_shaded_textured_affine(const std::vector<Polygon>& 
 		if ((region_codes[0] & region_codes[1] & region_codes[2]).any())
 			continue;
 
+		// Near plane clipping.
+		int in = 0;
+		int out = 0;
+		for (Vertex& vertex : polygon.vertices) {
+			if (vertex.pos.z > -0.1f)
+				++out;
+			else if (vertex.pos.z < -0.1f)
+				++in;
+		}
+		Vertex v0 = polygon.vertices[0];
+		Vertex v1 = polygon.vertices[1];
+		Vertex v2 = polygon.vertices[2];
+		if (in == 1 && out == 2) {
+			if (v1.pos.z < -0.1f) {
+				std::swap(v0, v1);
+				std::swap(v1, v2);
+			}
+			else if (v2.pos.z < -0.1f) {
+				std::swap(v0, v2);
+				std::swap(v1, v2);
+			}
+		}
+		float t1 = (-0.1f - v0.pos.z) / (v1.pos.z - v0.pos.z);
+		float t2 = (-0.1f - v0.pos.z) / (v2.pos.z - v0.pos.z);
+		/*
 		// Вычисляем нормаль полигона.
 		const Vertex& v0 = polygon.vertices[0];
 		const Vertex& v1 = polygon.vertices[1];
 		const Vertex& v2 = polygon.vertices[2];
-
 		const Vec3f edge1 = v1.pos - v0.pos;
 		const Vec3f edge2 = v2.pos - v0.pos;
 		const Vec3f polygon_normal = Vec3f::cross(edge1, edge2).get_normalized();
@@ -241,13 +264,14 @@ void rasterize_polygons_flat_shaded_textured_affine(const std::vector<Polygon>& 
 		}
 		Polygon polygon_screen{ {vertices_screen[0], vertices_screen[1], vertices_screen[2]}, polygon.albedo_color, polygon_normal };
 		draw_polygon_flat_shaded_textured_affine(polygon_screen, texture_image, light, framebuffer, z_buffer);
+		*/
 	}
 }
 
 void test(const sf::Image& texture_image, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer) {
 	test_triangle_1(texture_image, light, framebuffer, z_buffer);
-	test_triangle_2(texture_image, light, framebuffer, z_buffer);
-	test_triangle_3(texture_image, light, framebuffer, z_buffer);
+	//test_triangle_2(texture_image, light, framebuffer, z_buffer);
+	//test_triangle_3(texture_image, light, framebuffer, z_buffer);
 }
 
 void test_triangle_1(const sf::Image& texture_image, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer) {
