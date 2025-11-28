@@ -243,6 +243,14 @@ void rasterize_polygons_flat_shaded_textured_affine(const std::vector<Polygon>& 
 		}
 		float t1 = (-0.1f - v0.pos.z) / (v1.pos.z - v0.pos.z);
 		float t2 = (-0.1f - v0.pos.z) / (v2.pos.z - v0.pos.z);
+
+		Vec3f dir1 = (v1.pos - v0.pos);
+		Vec3f dir2 = (v2.pos - v0.pos);
+
+		Vec3f v1_intersect = v0.pos + dir1 * t1;
+		Vec3f v2_intersect = v0.pos + dir2 * t2;
+
+		std::cout << '\n';
 		/*
 		// Вычисляем нормаль полигона.
 		const Vertex& v0 = polygon.vertices[0];
