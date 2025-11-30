@@ -167,6 +167,7 @@ void rasterize_polygons_flat_shaded_textured_affine(const std::vector<Polygon>& 
 	Mat4f proj = Mat4f::create_perspective(fov_vert_rad, aspect_ratio, 0.1f, 10.0f);
 	Mat4f viewport = Mat4f::create_viewport(framebuffer.w, framebuffer.h);
 
+	std::vector<Polygon> culled_clipped_polygons;
 	for (Polygon polygon : polygons) {
 		for (Vertex& vertex : polygon.vertices) {
 			Vec4f pos{ vertex.pos };
@@ -231,6 +232,7 @@ void rasterize_polygons_flat_shaded_textured_affine(const std::vector<Polygon>& 
 		Vertex v0 = polygon.vertices[0];
 		Vertex v1 = polygon.vertices[1];
 		Vertex v2 = polygon.vertices[2];
+		// Приводим названия к каноническому виду (унифицируем все возможные случаи именований).
 		if (in == 1 && out == 2) {
 			if (v1.pos.z < -0.1f) {
 				std::swap(v0, v1);
@@ -241,6 +243,53 @@ void rasterize_polygons_flat_shaded_textured_affine(const std::vector<Polygon>& 
 				std::swap(v1, v2);
 			}
 		}
+		else if (in == 2 && out == 1) {
+			if (v0.pos.z > -0.1f) {
+				std::swap(v0, v2);
+				std::swap(v0, v1);
+			}
+			else if (v1.pos.z > -0.1f) {
+				std::swap(v1, v2);
+				std::swap(v0, v1);
+			}
+
+			float t1 = (-0.1f - v0.pos.z) / (v2.pos.z - v0.pos.z);
+			float t2 = (-0.1f - v1.pos.z) / (v2.pos.z - v1.pos.z);
+
+			Vec3f dir1 = (v2.pos - v0.pos);
+			Vec3f dir2 = (v2.pos - v1.pos);
+
+			Vec3f v0_intersect = v0.pos + dir1 * t1;
+			Vec3f v1_intersect = v1.pos + dir2 * t2;
+
+			polygon.vertices[0] = v0;
+			polygon.vertices[1]= v1;
+			polygon.vertices[2].pos = v1_intersect;
+
+			// Клиппинг текстурных координат.
+			float full_len1 = (v2.pos - v1.pos).length();
+			float u1_slope = (v2.tex_coord.u - v1.tex_coord.u) / full_len1;
+			float v1_slope = (v2.tex_coord.v - v1.tex_coord.v) / full_len1;
+			float clipped_len1 = (v1_intersect - v1.pos).length();
+			float u1_clipped = v1.tex_coord.u + (clipped_len1 * u1_slope);
+			float v1_clipped = v1.tex_coord.v + (clipped_len1 * v1_slope);
+			polygon.vertices[2].tex_coord.u = u1_clipped;
+			polygon.vertices[2].tex_coord.v = v1_clipped;
+
+			float full_len2 = (v2.pos - v0.pos).length();
+			float u2_slope = (v2.tex_coord.u - v0.tex_coord.u) / full_len2;
+			float v2_slope = (v2.tex_coord.v - v0.tex_coord.v) / full_len2;
+			float clipped_len2 = (v0_intersect - v0.pos).length();
+			float u2_clipped = v0.tex_coord.u + (clipped_len2 * u2_slope);
+			float v2_clipped = v0.tex_coord.v + (clipped_len2 * v2_slope);
+			Vertex v{ v0_intersect, TexCoord{u2_clipped, v2_clipped} };
+			// END: Near plane clipping
+			Polygon p{ {v0, polygon.vertices[2], v} };
+			
+			culled_clipped_polygons.push_back(polygon);
+			culled_clipped_polygons.push_back(p);
+		}
+		/*
 		float t1 = (-0.1f - v0.pos.z) / (v1.pos.z - v0.pos.z);
 		float t2 = (-0.1f - v0.pos.z) / (v2.pos.z - v0.pos.z);
 
@@ -250,9 +299,37 @@ void rasterize_polygons_flat_shaded_textured_affine(const std::vector<Polygon>& 
 		Vec3f v1_intersect = v0.pos + dir1 * t1;
 		Vec3f v2_intersect = v0.pos + dir2 * t2;
 
-		std::cout << '\n';
-		/*
-		// Вычисляем нормаль полигона.
+		polygon.vertices[0] = v0;
+		polygon.vertices[1].pos = v1_intersect;
+		polygon.vertices[2].pos = v2_intersect;
+
+		// Клиппинг текстурных координат.
+		float full_len1 = (v1.pos - v0.pos).length();
+		float u1_slope = (v1.tex_coord.u - v0.tex_coord.u) / full_len1;
+		float v1_slope = (v1.tex_coord.v - v0.tex_coord.v) / full_len1;
+		float clipped_len1 = (v1_intersect - v0.pos).length();
+		float u1_clipped = v0.tex_coord.u + (clipped_len1 * u1_slope);
+		float v1_clipped = v0.tex_coord.v + (clipped_len1 * v1_slope);
+		polygon.vertices[1].tex_coord.u = u1_clipped;
+		polygon.vertices[1].tex_coord.v = v1_clipped;
+
+		float full_len2 = (v2.pos - v0.pos).length();
+		float u2_slope = (v2.tex_coord.u - v0.tex_coord.u) / full_len2;
+		float v2_slope = (v2.tex_coord.v - v0.tex_coord.v) / full_len2;
+		float clipped_len2 = (v2_intersect - v0.pos).length();
+		float u2_clipped = v0.tex_coord.u + (clipped_len2 * u2_slope);
+		float v2_clipped = v0.tex_coord.v + (clipped_len2 * v2_slope);
+		polygon.vertices[2].tex_coord.u = u2_clipped;
+		polygon.vertices[2].tex_coord.v = v2_clipped;
+		// END: Near plane clipping
+
+		*/
+
+		culled_clipped_polygons.push_back(polygon);
+	}
+
+	for (Polygon polygon : culled_clipped_polygons) {
+		// Вычисляем нормаль к полигону.
 		const Vertex& v0 = polygon.vertices[0];
 		const Vertex& v1 = polygon.vertices[1];
 		const Vertex& v2 = polygon.vertices[2];
@@ -272,13 +349,12 @@ void rasterize_polygons_flat_shaded_textured_affine(const std::vector<Polygon>& 
 		}
 		Polygon polygon_screen{ {vertices_screen[0], vertices_screen[1], vertices_screen[2]}, polygon.albedo_color, polygon_normal };
 		draw_polygon_flat_shaded_textured_affine(polygon_screen, texture_image, light, framebuffer, z_buffer);
-		*/
 	}
 }
 
 void test(const sf::Image& texture_image, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer) {
-	test_triangle_1(texture_image, light, framebuffer, z_buffer);
-	//test_triangle_2(texture_image, light, framebuffer, z_buffer);
+	//test_triangle_1(texture_image, light, framebuffer, z_buffer);
+	test_triangle_2(texture_image, light, framebuffer, z_buffer);
 	//test_triangle_3(texture_image, light, framebuffer, z_buffer);
 }
 
