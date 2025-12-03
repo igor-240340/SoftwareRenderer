@@ -220,6 +220,232 @@ void draw_line_dda_z(float x0_f, float y0_f, float z0, float x1_f, float y1_f, f
 	}
 }
 
+void rasterize_polygons_flat_shaded_textured_affine(const std::vector<Polygon>& polygons, const sf::Image& texture_image, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer, const MVP& mvp) {
+	Mat4f viewport = Mat4f::create_viewport(framebuffer.w, framebuffer.h);
+
+	std::vector<Polygon> cull_clip_passed_polygons;
+	for (Polygon polygon : polygons) {
+		for (Vertex& vertex : polygon.vertices) {
+			Vec4f pos{ vertex.pos };
+			vertex.pos = mvp.view * mvp.model * pos;
+		}
+
+		// Frustum culling.
+		enum FrustumPlaneBit {
+			left,
+			right,
+			bottom,
+			top,
+			near,
+			far
+		};
+		float ratio = static_cast<float>(framebuffer.w) / framebuffer.h;
+		float fov_vert_half_rad = mvp.fov_vert_half_rad;
+		float d = 1.0f / std::tan(fov_vert_half_rad);
+		float frustum_x_slope_left = ratio / d;
+		float frustum_x_slope_right = -ratio / d;
+		float frustum_y_slope_bottom = 1.0f / d;
+		float frustum_y_slope_top = -1.0f / d;
+		std::array<std::bitset<6>, 3> region_codes{};
+		for (int i = 0; i < polygon.vertices.size(); ++i) {
+			// Куллинг с левой плоскостью фрустума.
+			float left_lim = polygon.vertices[i].pos.z * frustum_x_slope_left;
+			region_codes[i].set(FrustumPlaneBit::left, polygon.vertices[i].pos.x <= left_lim);
+
+			// Куллинг с правой плоскостью фрустума.
+			float right_lim = polygon.vertices[i].pos.z * frustum_x_slope_right;
+			region_codes[i].set(FrustumPlaneBit::right, polygon.vertices[i].pos.x >= right_lim);
+
+			// Куллинг с нижней плоскостью фрустума.
+			float bottom_lim = polygon.vertices[i].pos.z * frustum_y_slope_bottom;
+			region_codes[i].set(FrustumPlaneBit::bottom, polygon.vertices[i].pos.y <= bottom_lim);
+
+			// Куллинг с верхней плоскостью фрустума.
+			float top_lim = polygon.vertices[i].pos.z * frustum_y_slope_top;
+			region_codes[i].set(FrustumPlaneBit::top, polygon.vertices[i].pos.y >= top_lim);
+
+			// Куллинг с дальней плоскосотью фрустума.
+			float far_lim = mvp.far_plane;
+			region_codes[i].set(FrustumPlaneBit::far, polygon.vertices[i].pos.z <= far_lim);
+
+			// Куллинг с ближней плоскосотью фрустума.
+			float near_lim = mvp.near_plane;
+			region_codes[i].set(FrustumPlaneBit::near, polygon.vertices[i].pos.z >= near_lim);
+		}
+		// Все три вершины находятся за пределами общей плоскости - отбрасываем полигон.
+		if ((region_codes[0] & region_codes[1] & region_codes[2]).any())
+			continue;
+
+		// Near plane clipping.
+		int in = 0;
+		int out = 0;
+		int on_plane = 0;
+		for (Vertex& vertex : polygon.vertices) {
+			if (vertex.pos.z > mvp.near_plane)
+				++out;
+			else if (vertex.pos.z < mvp.near_plane)
+				++in;
+			else
+				++on_plane;
+		}
+		Vertex v0 = polygon.vertices[0];
+		Vertex v1 = polygon.vertices[1];
+		Vertex v2 = polygon.vertices[2];
+		// Приводим названия к каноническому виду (упорядочиваем названия).
+		if (in == 1 && out == 2) {
+			if (v1.pos.z < mvp.near_plane) {
+				std::swap(v0, v1);
+				std::swap(v1, v2);
+			}
+			else if (v2.pos.z < mvp.near_plane) {
+				std::swap(v0, v2);
+				std::swap(v1, v2);
+			}
+
+			float t1 = (mvp.near_plane - v0.pos.z) / (v1.pos.z - v0.pos.z);
+			float t2 = (mvp.near_plane - v0.pos.z) / (v2.pos.z - v0.pos.z);
+
+			Vec3f dir1 = (v1.pos - v0.pos);
+			Vec3f dir2 = (v2.pos - v0.pos);
+
+			Vec3f v1_intersect_pos = v0.pos + dir1 * t1;
+			Vec3f v2_intersect_pos = v0.pos + dir2 * t2;
+
+			// Клиппинг текстурных координат.
+			float full_len1 = (v1.pos - v0.pos).length();
+			float u1_slope = (v1.tex_coord.u - v0.tex_coord.u) / full_len1;
+			float v1_slope = (v1.tex_coord.v - v0.tex_coord.v) / full_len1;
+			float clipped_len1 = (v1_intersect_pos - v0.pos).length();
+			float u1_clipped = v0.tex_coord.u + (clipped_len1 * u1_slope);
+			float v1_clipped = v0.tex_coord.v + (clipped_len1 * v1_slope);
+
+			float full_len2 = (v2.pos - v0.pos).length();
+			float u2_slope = (v2.tex_coord.u - v0.tex_coord.u) / full_len2;
+			float v2_slope = (v2.tex_coord.v - v0.tex_coord.v) / full_len2;
+			float clipped_len2 = (v2_intersect_pos - v0.pos).length();
+			float u2_clipped = v0.tex_coord.u + (clipped_len2 * u2_slope);
+			float v2_clipped = v0.tex_coord.v + (clipped_len2 * v2_slope);
+
+			Vertex v1_intersect{ v1_intersect_pos, TexCoord{u1_clipped, v1_clipped} };
+			Vertex v2_intersect{ v2_intersect_pos, TexCoord{u2_clipped, v2_clipped} };
+
+			polygon.vertices[0] = v0;
+			polygon.vertices[1] = v1_intersect;
+			polygon.vertices[2] = v2_intersect;
+			cull_clip_passed_polygons.push_back(polygon);
+		}
+		else if (in == 2 && out == 1) {
+			if (v0.pos.z > mvp.near_plane) {
+				std::swap(v0, v2);
+				std::swap(v0, v1);
+			}
+			else if (v1.pos.z > mvp.near_plane) {
+				std::swap(v1, v2);
+				std::swap(v0, v1);
+			}
+
+			float t0 = (mvp.near_plane - v0.pos.z) / (v2.pos.z - v0.pos.z);
+			float t1 = (mvp.near_plane - v1.pos.z) / (v2.pos.z - v1.pos.z);
+
+			Vec3f dir0 = (v2.pos - v0.pos);
+			Vec3f dir1 = (v2.pos - v1.pos);
+
+			Vec3f v0_intersect_pos = v0.pos + dir0 * t0;
+			Vec3f v1_intersect_pos = v1.pos + dir1 * t1;
+
+			// Клиппинг текстурных координат.
+			float full_len0 = (v2.pos - v0.pos).length();
+			float u0_slope = (v2.tex_coord.u - v0.tex_coord.u) / full_len0;
+			float v0_slope = (v2.tex_coord.v - v0.tex_coord.v) / full_len0;
+			float clipped_len0 = (v0_intersect_pos - v0.pos).length();
+			float u0_clipped = v0.tex_coord.u + (clipped_len0 * u0_slope);
+			float v0_clipped = v0.tex_coord.v + (clipped_len0 * v0_slope);
+
+			float full_len1 = (v2.pos - v1.pos).length();
+			float u1_slope = (v2.tex_coord.u - v1.tex_coord.u) / full_len1;
+			float v1_slope = (v2.tex_coord.v - v1.tex_coord.v) / full_len1;
+			float clipped_len1 = (v1_intersect_pos - v1.pos).length();
+			float u1_clipped = v1.tex_coord.u + (clipped_len1 * u1_slope);
+			float v1_clipped = v1.tex_coord.v + (clipped_len1 * v1_slope);
+
+			Vertex v0_intersect{ v0_intersect_pos, TexCoord{u0_clipped, v0_clipped} };
+			Vertex v1_intersect{ v1_intersect_pos, TexCoord{u1_clipped, v1_clipped} };
+
+			polygon.vertices[0] = v0;
+			polygon.vertices[1] = v1;
+			polygon.vertices[2] = v1_intersect;
+			cull_clip_passed_polygons.push_back(polygon);
+
+			Polygon new_poly{ {v0, v1_intersect, v0_intersect} };
+			cull_clip_passed_polygons.push_back(new_poly);
+		}
+		else if (in == 1 && out == 1 && on_plane == 1) {
+			if (v1.pos.z < mvp.near_plane) {
+				std::swap(v0, v1);
+				std::swap(v1, v2);
+			}
+			else if (v2.pos.z < mvp.near_plane) {
+				std::swap(v0, v2);
+				std::swap(v2, v1);
+			}
+
+			// Определяем вершину, лежащую за пределами ближней плоскости отсечения.
+			Vertex v_out = (v1.pos.z > v2.pos.z) ? v1 : v2;
+			float t_out = (mvp.near_plane - v0.pos.z) / (v_out.pos.z - v0.pos.z);
+			Vec3f dir_out = (v_out.pos - v0.pos);
+			Vec3f v_out_intersect_pos = v0.pos + dir_out * t_out;
+
+			// Клиппинг текстурных координат.
+			float full_len = (v_out.pos - v0.pos).length();
+			float u_slope = (v_out.tex_coord.u - v0.tex_coord.u) / full_len;
+			float v_slope = (v_out.tex_coord.v - v0.tex_coord.v) / full_len;
+			float clipped_len = (v_out_intersect_pos - v0.pos).length();
+			float u_clipped = v0.tex_coord.u + (clipped_len * u_slope);
+			float v_clipped = v0.tex_coord.v + (clipped_len * v_slope);
+
+			Vertex v_out_intersect{ v_out_intersect_pos, TexCoord{u_clipped, v_clipped} };
+
+			polygon.vertices[0] = v0;
+			if (v1.pos.z > v2.pos.z) {
+				polygon.vertices[1] = v_out_intersect;
+				polygon.vertices[2] = v2;
+			}
+			else {
+				polygon.vertices[2] = v_out_intersect;
+				polygon.vertices[1] = v1;
+			}
+			cull_clip_passed_polygons.push_back(polygon);
+		}
+		// Полигон находится целиком внутри фрустума.
+		else {
+			cull_clip_passed_polygons.push_back(polygon);
+		}
+	}
+
+	for (Polygon polygon : cull_clip_passed_polygons) {
+		// Вычисляем нормаль к полигону.
+		const Vertex& v0 = polygon.vertices[0];
+		const Vertex& v1 = polygon.vertices[1];
+		const Vertex& v2 = polygon.vertices[2];
+		const Vec3f edge1 = v1.pos - v0.pos;
+		const Vec3f edge2 = v2.pos - v0.pos;
+		const Vec3f polygon_normal = Vec3f::cross(edge1, edge2).get_normalized();
+
+		std::vector<Vertex> vertices_screen;
+		for (const auto& vertex : polygon.vertices) {
+			Vec4f pos{ vertex.pos };
+
+			Vec4f pos_clip = mvp.proj * pos;
+			Vec4f pos_ndc = pos_clip / pos_clip.w;
+			Vec4f pos_screen = viewport * pos_ndc;
+
+			vertices_screen.push_back(Vertex{ Vec3f{pos_screen}, vertex.tex_coord });
+		}
+		Polygon polygon_screen{ {vertices_screen[0], vertices_screen[1], vertices_screen[2]}, polygon.albedo_color, polygon_normal };
+		draw_polygon_flat_shaded_textured_affine(polygon_screen, texture_image, light, framebuffer, z_buffer);
+	}
+}
+
 void set_pixel_color(int x, int y, sf::Color color, Framebuffer& framebuffer) {
 	const int index = (y * framebuffer.w + x) * 4;
 

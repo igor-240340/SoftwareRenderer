@@ -5,6 +5,7 @@
 #include <SFML/Graphics.hpp>
 
 #include "Vec3f.h"
+#include "Mat4f.h"
 
 struct TexCoord {
 	float u;
@@ -37,6 +38,16 @@ struct ZBuffer {
 	int h;
 	std::vector<float> depth_array;
 };
+
+struct MVP {
+	Mat4f model;
+	Mat4f view;
+	Mat4f proj;
+	float near_plane;
+	float far_plane;
+	float fov_vert_half_rad;
+};
+void rasterize_polygons_flat_shaded_textured_affine(const std::vector<Polygon>& polygons, const sf::Image& texture_image, const Light& light, Framebuffer& framebuffer, ZBuffer& z_buffer, const MVP& mvp);
 
 void set_pixel_color(int x, int y, sf::Color color, Framebuffer& framebuffer);
 
