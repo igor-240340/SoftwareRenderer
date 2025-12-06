@@ -174,9 +174,9 @@ void test_triangle_1_backfacing(const sf::Image& texture_image, const Light& lig
 	};
 
 	Polygon p{ {
-		Vertex{ Vec3f{ 0.02f, 0.004646249246696f, -0.12f }, TexCoord{ 0.0f, 0.0f } },
-		Vertex{ Vec3f{ 0.02f, 0.02f, -0.08f }, TexCoord{ 0.0f, 1.0f } },
-		Vertex{ Vec3f{ 0.005597225788393f, 0.006742535066108f, -0.0720720701976f }, TexCoord{ 1.0f, 0.0f } }
+		Vertex{ Vec3f{ 0.3357496272758f, 0.2368308267803f, -4.324366528597f }, TexCoord{ 1.0f, 0.0f } },
+		Vertex{ Vec3f{ 1.16051947325f, 1.5f, -4.682135308654f }, TexCoord{ 0.0f, 1.0f } },
+		Vertex{ Vec3f{ 1.376817984731f, 0.7825018382016f, -4.193619659788f }, TexCoord{ 0.0f, 0.0f } }
 	} };
 	rasterize_polygons_flat_shaded_textured_affine(std::vector<Polygon>{p}, texture_image, light, framebuffer, z_buffer, mvp);
 }
@@ -194,9 +194,9 @@ void test_triangle_2_parallel(const sf::Image& texture_image, const Light& light
 	};
 
 	Polygon p{ {
-		Vertex{ Vec3f{ -0.01f, 0.006733721295353f, -0.12f }, TexCoord{ 0.0f, 0.0f } },
-		Vertex{ Vec3f{ -0.03f, 0.0186003633741f, -0.08f }, TexCoord{ 0.0f, 1.0f } },
-		Vertex{ Vec3f{ -0.03f, -0.008181730528715f, -0.12f }, TexCoord{ 1.0f, 0.0f } }
+		Vertex{ Vec3f{ -0.5f, 1.177842998324f, -4.0f }, TexCoord{ 0.0f, 1.0f } },
+		Vertex{ Vec3f{ -0.5f, 0.2906759182445f, -4.5f }, TexCoord{ 0.0f, 0.0f } },
+		Vertex{ Vec3f{ -0.5f, -0.4295801671475f, -3.0f }, TexCoord{ 1.0f, 0.0f } }
 	} };
 	rasterize_polygons_flat_shaded_textured_affine(std::vector<Polygon>{p}, texture_image, light, framebuffer, z_buffer, mvp);
 }
@@ -214,9 +214,9 @@ void test_triangle_frontfacing(const sf::Image& texture_image, const Light& ligh
 	};
 
 	Polygon p{ {
-		Vertex{ Vec3f{ 0.03271314484695f, 0.01291430289638f, -0.1124120569845f }, TexCoord{ 0.0f, 1.0f } },
-		Vertex{ Vec3f{ 0.03150339640582f, -0.002456323436303f, -0.1f }, TexCoord{ 0.0f, 0.0f } },
-		Vertex{ Vec3f{ 0.04386767665149f, 0.0f, -0.08308856946123f }, TexCoord{ 1.0f, 0.0f } }
+		Vertex{ Vec3f{ -0.8070675409477f, 0.0f, -3.153332675615f }, TexCoord{ 0.0f, 0.0f } },
+		Vertex{ Vec3f{ -1.0f, 1.0f, -3.5f }, TexCoord{ 0.0f, 1.0f } },
+		Vertex{ Vec3f{ -1.271128274256f, 0.0f, -3.121556371307f }, TexCoord{ 1.0f, 0.0f } }
 	} };
 	rasterize_polygons_flat_shaded_textured_affine(std::vector<Polygon>{p}, texture_image, light, framebuffer, z_buffer, mvp);
 }

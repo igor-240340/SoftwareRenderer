@@ -230,6 +230,22 @@ void rasterize_polygons_flat_shaded_textured_affine(const std::vector<Polygon>& 
 			vertex.pos = mvp.view * mvp.model * pos;
 		}
 
+		// Backface culling.
+		// NOTE: Пока под вопросом, что оптимальней: выполнить сначала backface culling,
+		// а потом всё остальное, или наоборот.
+		
+		// Вычисляем нормаль к полигону.
+		const Vec3f edge1 = polygon.vertices[1].pos - polygon.vertices[0].pos;
+		const Vec3f edge2 = polygon.vertices[2].pos - polygon.vertices[0].pos;
+		const Vec3f polygon_normal = Vec3f::cross(edge1, edge2).get_normalized();
+		float dot = Vec3f::dot(polygon_normal, Vec3f{ 0.0f, 0.0f, 1.0f });
+		// NOTE: Возможно, стоит добавить сравнение с каким-то положительным эпсилон
+		// на случай, если фактически параллельный полигон после трансформаций матрицей модели
+		// потеряет параллельность и окажется в числах слегка не параллельным, а значит, будет отрисован.
+		// Но пока такой проблемы не возникало.
+		if (dot <= 0.0f)
+			continue;
+
 		// Frustum culling.
 		enum FrustumPlaneBit {
 			left,
