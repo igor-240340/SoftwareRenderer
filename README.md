@@ -1,6 +1,6 @@
 # Software Renderer
 
-https://github.com/user-attachments/assets/fe9d500c-85fa-413d-8c68-5276ec42407c
+https://github.com/user-attachments/assets/6701d146-6460-4131-9a6a-c8930ce3d4fa
 
 ## Documentation
 The /docs directory contains GeoGebra, Mathcad and other files that contain visualization and formal derivation of all mathematical constructions used in the renderer: rotation matrices, clipping algorithms etc.
