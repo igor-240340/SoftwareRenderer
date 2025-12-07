@@ -229,23 +229,7 @@ void rasterize_polygons_flat_shaded_textured_affine(const std::vector<Polygon>& 
 			Vec4f pos{ vertex.pos };
 			vertex.pos = mvp.view * mvp.model * pos;
 		}
-
-		// Backface culling.
-		// NOTE: Пока под вопросом, что оптимальней: выполнить сначала backface culling,
-		// а потом всё остальное, или наоборот.
 		
-		// Вычисляем нормаль к полигону.
-		const Vec3f edge1 = polygon.vertices[1].pos - polygon.vertices[0].pos;
-		const Vec3f edge2 = polygon.vertices[2].pos - polygon.vertices[0].pos;
-		const Vec3f polygon_normal = Vec3f::cross(edge1, edge2).get_normalized();
-		float dot = Vec3f::dot(polygon_normal, Vec3f{ 0.0f, 0.0f, 1.0f });
-		// NOTE: Возможно, стоит добавить сравнение с каким-то положительным эпсилон
-		// на случай, если фактически параллельный полигон после трансформаций матрицей модели
-		// потеряет параллельность и окажется в числах слегка не параллельным, а значит, будет отрисован.
-		// Но пока такой проблемы не возникало.
-		if (dot <= 0.0f)
-			continue;
-
 		// Frustum culling.
 		enum FrustumPlaneBit {
 			left,
@@ -447,12 +431,31 @@ void rasterize_polygons_flat_shaded_textured_affine(const std::vector<Polygon>& 
 		const Vec3f edge2 = v2.pos - v0.pos;
 		const Vec3f polygon_normal = Vec3f::cross(edge1, edge2).get_normalized();
 
-		std::vector<Vertex> vertices_screen;
-		for (const auto& vertex : polygon.vertices) {
+		// Переводим все вершины полигона в NDC.
+		for (auto& vertex : polygon.vertices) {
 			Vec4f pos{ vertex.pos };
 
 			Vec4f pos_clip = mvp.proj * pos;
 			Vec4f pos_ndc = pos_clip / pos_clip.w;
+			vertex.pos = pos_ndc;
+		}
+
+		// Backface culling.
+		// NOTE: Выполняем в NDC, поскольку фактически параллельный полигон
+		// после перспективного преобразования может оказаться видимым на проективной плоскости (если он не лежит в середине фрустума).
+		// Если же мы сделаем куллинг в исходном пространстве, то такой полигон будет отброшен и мы увидим дыру в геометрии.
+		const Vec3f _edge1 = polygon.vertices[1].pos - polygon.vertices[0].pos;
+		const Vec3f _edge2 = polygon.vertices[2].pos - polygon.vertices[0].pos;
+		const Vec3f _polygon_normal = Vec3f::cross(_edge1, _edge2).get_normalized();
+		// NOTE: Возможно, стоит добавить сравнение с каким-то положительным эпсилон.
+		float dot = Vec3f::dot(_polygon_normal, Vec3f{ 0.0f, 0.0f, 1.0f });
+		if (dot <= 0.0f)
+			continue;
+
+		std::vector<Vertex> vertices_screen;
+		for (const auto& vertex : polygon.vertices) {
+			Vec4f pos_ndc = vertex.pos;
+
 			Vec4f pos_screen = viewport * pos_ndc;
 
 			vertices_screen.push_back(Vertex{ Vec3f{pos_screen}, vertex.tex_coord });

@@ -67,7 +67,7 @@ int main() {
     sf::Sprite sprite(texture);
 
     Light light{ Vec3f{0.0f, 0.0f, -1.0f} };
-    Framebuffer frame_buffer{ w, h, std::vector<sf::Uint8>(w * h * 4) };
+    Framebuffer framebuffer{ w, h, std::vector<sf::Uint8>(w * h * 4) };
     ZBuffer z_buffer{ w, h, std::vector<float>(w * h) };
 
     std::vector<Polygon> polygons;
@@ -82,12 +82,18 @@ int main() {
     //const std::string model_path = "data/blender_monkey/blender_monkey.obj";
     //const std::string model_path = "data/pig/pig.obj";
     //const std::string model_path = "data/plane/plane.obj";
-    const std::string model_path = "data/new_balance/nb574.obj";
+    //const std::string model_path = "data/prima_cigarettes/prima.obj";
+    //const std::string model_path = "data/belomorkanal/belomorkanal.obj";
+    //const std::string model_path = "data/condensed_milk/condensed_milk.obj";
+    const std::string model_path = "data/house/house.obj";
     load_model(model_path, polygons);
 
     // Читаем текстуру модели.
     sf::Texture model_texture;
-    if (!model_texture.loadFromFile("data/new_balance/nb574.jpeg")) {
+    //if (!model_texture.loadFromFile("data/condensed_milk/condensed_milk.png")) {
+    //if (!model_texture.loadFromFile("data/prima_cigarettes/prima.png")) {
+    //if (!model_texture.loadFromFile("data/belomorkanal/belomorkanal.png")) {
+    if (!model_texture.loadFromFile("data/house/house.jpg")) {
         std::cout << "sfml: model_texture.loadFromFile() failed\n";
         return 1;
     }
@@ -96,7 +102,7 @@ int main() {
     auto measure_start = high_res_clock::now();
     int frame_count = 0;
 
-    const float angle_rad_step = static_cast<float>(std::numbers::pi / 180.0);
+    const float angle_rad_step = static_cast<float>(std::numbers::pi / 180.0) / 10.0f;
     const float two_pi = static_cast<float>(std::numbers::pi * 2.0);
     float angle_rad_accum = 0.0f;
     while (window.isOpen()) {
@@ -106,7 +112,7 @@ int main() {
                 window.close();
         }
 
-        clear_framebuffer(sf::Color::White, frame_buffer);
+        clear_framebuffer(sf::Color::White, framebuffer);
         clear_z_buffer(1.0f, z_buffer);
 
         //debug_z_fighting(frame_buffer, z_buffer);
@@ -117,12 +123,24 @@ int main() {
 
         //rasterize_polygons_flat_shaded_and_rotate(polygons, light, frame_buffer, z_buffer, angle_rad_accum);
 
-        Mat4f translation = Mat4f::create_translation(Vec3f{ 0.0f, 0.0f, -5.0f });
-        Mat4f rotation_x = Mat4f::create_rotation_x(-90.0f * static_cast<float>(std::numbers::pi / 180.0));
-        Mat4f rotation_y = Mat4f::create_rotation_y(angle_rad_accum);
-		Mat4f scale_xy = Mat4f::create_scale_x(0.4f) * Mat4f::create_scale_y(0.4f) * Mat4f::create_scale_z(0.4f);
-        Mat4f transformations = translation * rotation_y * rotation_x * scale_xy;
-        rasterize_polygons_flat_shaded_textured_affine(polygons, model_texture_image, light, frame_buffer, z_buffer, transformations);
+        Mat4f translation = Mat4f::create_translation(Vec3f{ 0.3f, -1.3f, -6.5f });
+        Mat4f rotation_x = Mat4f::create_rotation_x(17.0f * static_cast<float>(std::numbers::pi / 180.0));
+		//Mat4f rotation_y = Mat4f::create_rotation_y(45.0f * static_cast<float>(std::numbers::pi / 180.0));
+		Mat4f rotation_y = Mat4f::create_rotation_y(angle_rad_accum * 10.0f);
+        Mat4f rotation_z = Mat4f::create_rotation_z(0.0f);
+        Mat4f scale_xy = Mat4f::create_scale_x(0.03f) * Mat4f::create_scale_y(0.03f) * Mat4f::create_scale_z(0.03f);
+        Mat4f model = translation * rotation_z * rotation_x * rotation_y * scale_xy;
+        float fov_vert_rad = static_cast<float>(45.0 * (std::numbers::pi / 180.0));
+        float aspect_ratio = static_cast<float>(framebuffer.w) / framebuffer.h;
+        MVP mvp{
+            model,
+            Mat4f::create_identity(),
+            Mat4f::create_perspective(fov_vert_rad, aspect_ratio, 0.1f, 10.0f),
+            -0.1f,
+            -10.0f,
+            fov_vert_rad / 2.0f
+        };
+        rasterize_polygons_flat_shaded_textured_affine(polygons, model_texture_image, light, framebuffer, z_buffer, mvp);
 
         //rasterize_polygons_wireframe_ortho(polygons, frame_buffer);
         //rasterize_polygons_solid_ortho(polygons, frame_buffer, z_buffer);
@@ -130,7 +148,7 @@ int main() {
 
         //demonstrate_gimbal_lock(polygons, light, frame_buffer, z_buffer);
 
-        texture.update(frame_buffer.rgba_array.data());
+        texture.update(framebuffer.rgba_array.data());
 
         window.clear();
         window.draw(sprite);
